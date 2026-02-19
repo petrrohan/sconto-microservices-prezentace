@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sconto — Microservices Architektura</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sconto-yellow: #F6D84C;
+    --sconto-navy: #202330;
+    --sconto-blue: #0065FF;
+    --sconto-dark: #0f0f1a;
+    --sconto-surface: #161625;
+    --sconto-border: #2a2a3d;
+    --sconto-text: #e0e0e8;
+    --sconto-muted: #8888a0;
+    --sconto-green: #22c55e;
+    --sconto-red: #ef4444;
+    --sconto-orange: #f59e0b;
+    --glow-yellow: 0 0 30px rgba(246,216,76,0.3);
+    --glow-blue: 0 0 20px rgba(0,101,255,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: var(--sconto-dark);
+    color: var(--sconto-text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ── SLIDE SYSTEM ── */
+  .slide-deck { position: relative; width: 100vw; height: 100vh; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    padding: 100px 80px 40px;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    transform: translateX(40px);
+    overflow-y: auto;
+  }
+  .slide.active {
+    opacity: 1; visibility: visible; transform: translateX(0);
+  }
+
+  /* ── LOGO BAR ── */
+  .logo-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 30px;
+    background: linear-gradient(180deg, rgba(15,15,26,0.95) 0%, rgba(15,15,26,0.7) 100%);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--sconto-border);
+  }
+  .logo-bar svg { height: 48px; width: auto; }
+  .slide-counter {
+    font-size: 13px; color: var(--sconto-muted);
+    font-weight: 500; letter-spacing: 1px;
+  }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar {
+    position: fixed; top: 58px; left: 0; height: 3px; z-index: 100;
+    background: linear-gradient(90deg, var(--sconto-yellow), var(--sconto-blue));
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px rgba(246,216,76,0.5);
+  }
+
+  /* ── NAVIGATION ── */
+  .nav-controls {
+    position: fixed; bottom: 24px; right: 30px; z-index: 100;
+    display: flex; gap: 8px;
+  }
+  .nav-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid var(--sconto-border);
+    background: var(--sconto-surface);
+    color: var(--sconto-text);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; transition: all 0.2s;
+  }
+  .nav-btn:hover { border-color: var(--sconto-yellow); color: var(--sconto-yellow); }
+
+  /* ── TYPOGRAPHY ── */
+  h1 {
+    font-size: clamp(32px, 4vw, 52px); font-weight: 700;
+    line-height: 1.15; margin-bottom: 16px;
+    background: linear-gradient(135deg, #fff 0%, var(--sconto-yellow) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  h2 {
+    font-size: clamp(22px, 2.5vw, 32px); font-weight: 600;
+    color: #fff; margin-bottom: 12px;
+  }
+  h3 {
+    font-size: 18px; font-weight: 600; color: var(--sconto-yellow);
+    margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .subtitle {
+    font-size: clamp(16px, 1.8vw, 22px); color: var(--sconto-muted);
+    font-weight: 300; margin-bottom: 32px; max-width: 700px;
+  }
+  p { line-height: 1.7; margin-bottom: 12px; font-size: 15px; }
+  .tag {
+    display: inline-block; padding: 4px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .tag-yellow { background: rgba(246,216,76,0.15); color: var(--sconto-yellow); border: 1px solid rgba(246,216,76,0.3); }
+  .tag-blue { background: rgba(0,101,255,0.15); color: #5b9fff; border: 1px solid rgba(0,101,255,0.3); }
+  .tag-green { background: rgba(34,197,94,0.15); color: var(--sconto-green); border: 1px solid rgba(34,197,94,0.3); }
+  .tag-red { background: rgba(239,68,68,0.15); color: var(--sconto-red); border: 1px solid rgba(239,68,68,0.3); }
+  .tag-orange { background: rgba(245,158,11,0.15); color: var(--sconto-orange); border: 1px solid rgba(245,158,11,0.3); }
+
+  /* ── GRID LAYOUTS ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--sconto-surface); border: 1px solid var(--sconto-border);
+    border-radius: 12px; padding: 24px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .card:hover { border-color: rgba(246,216,76,0.4); box-shadow: var(--glow-yellow); }
+  .card-number {
+    font-size: 36px; font-weight: 800; color: var(--sconto-yellow);
+    line-height: 1; margin-bottom: 8px;
+  }
+  .card-title { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+  .card-desc { font-size: 13px; color: var(--sconto-muted); line-height: 1.5; }
+  .card-tag { margin-top: 10px; }
+
+  /* ── METRIC ROW ── */
+  .metric {
+    text-align: center; padding: 20px;
+    background: var(--sconto-surface); border-radius: 12px;
+    border: 1px solid var(--sconto-border);
+  }
+  .metric-value {
+    font-size: 32px; font-weight: 700; color: var(--sconto-yellow);
+    line-height: 1.1;
+  }
+  .metric-label { font-size: 12px; color: var(--sconto-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ── SVG DIAGRAMS ── */
+  .diagram-container {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    margin-top: 16px;
+  }
+  .diagram-container svg { max-width: 100%; max-height: 100%; }
+
+  /* SVG styles */
+  .node-rect {
+    fill: var(--sconto-surface); stroke: var(--sconto-border);
+    stroke-width: 1.5; rx: 8;
+    transition: stroke 0.3s, filter 0.3s;
+  }
+  .node-rect:hover { stroke: var(--sconto-yellow); filter: drop-shadow(0 0 8px rgba(246,216,76,0.3)); }
+  .node-label { fill: #fff; font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 600; }
+  .node-sublabel { fill: var(--sconto-muted); font-family: 'Poppins', sans-serif; font-size: 10px; }
+  .group-rect { fill: none; stroke: var(--sconto-border); stroke-width: 1; stroke-dasharray: 6 4; rx: 12; }
+  .group-label { fill: var(--sconto-muted); font-family: 'Poppins', sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .conn-line { stroke: var(--sconto-border); stroke-width: 1.5; fill: none; }
+  .conn-animated { stroke: var(--sconto-yellow); stroke-width: 1.5; fill: none; stroke-dasharray: 4 8; animation: flowDash 1.5s linear infinite; }
+  .conn-blue { stroke: var(--sconto-blue); stroke-width: 1.5; fill: none; stroke-dasharray: 4 8; animation: flowDash 1.5s linear infinite; }
+  .conn-label-bg { fill: var(--sconto-dark); }
+  .conn-label-text { fill: var(--sconto-muted); font-family: 'Poppins', sans-serif; font-size: 9px; }
+  .highlight-rect { fill: rgba(246,216,76,0.08); stroke: var(--sconto-yellow); stroke-width: 1.5; rx: 8; }
+  .vpc-rect { fill: rgba(246,216,76,0.03); stroke: rgba(246,216,76,0.2); stroke-width: 1; stroke-dasharray: 8 4; rx: 12; }
+  .vpc-label { fill: var(--sconto-yellow); font-family: 'Poppins', sans-serif; font-size: 11px; font-weight: 600; opacity: 0.7; }
+  .warning-rect { fill: rgba(239,68,68,0.08); stroke: var(--sconto-red); stroke-width: 1.5; stroke-dasharray: 6 3; rx: 8; }
+  .ok-rect { fill: rgba(34,197,94,0.06); stroke: var(--sconto-green); stroke-width: 1; rx: 8; }
+
+  @keyframes flowDash { to { stroke-dashoffset: -24; } }
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+  /* ── TABLE ── */
+  .s-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }
+  .s-table th {
+    text-align: left; padding: 10px 14px; font-weight: 600; font-size: 12px;
+    color: var(--sconto-yellow); text-transform: uppercase; letter-spacing: 1px;
+    border-bottom: 2px solid var(--sconto-border);
+  }
+  .s-table td {
+    padding: 10px 14px; border-bottom: 1px solid rgba(42,42,61,0.5);
+    color: var(--sconto-text);
+  }
+  .s-table tr:hover td { background: rgba(246,216,76,0.03); }
+
+  /* ── TIMELINE ── */
+  .timeline { display: flex; flex-direction: column; gap: 0; margin-top: 16px; }
+  .timeline-item {
+    display: flex; gap: 20px; position: relative;
+    padding-bottom: 24px;
+  }
+  .timeline-item:not(:last-child)::after {
+    content: ''; position: absolute; left: 19px; top: 40px; bottom: 0;
+    width: 2px; background: var(--sconto-border);
+  }
+  .timeline-dot {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; color: var(--sconto-navy);
+    background: var(--sconto-yellow);
+  }
+  .timeline-content { flex: 1; padding-top: 6px; }
+  .timeline-title { font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .timeline-desc { font-size: 13px; color: var(--sconto-muted); line-height: 1.5; }
+
+  /* ── LISTS ── */
+  .check-list { list-style: none; padding: 0; }
+  .check-list li {
+    padding: 8px 0; padding-left: 28px; position: relative;
+    font-size: 15px; line-height: 1.6;
+  }
+  .check-list li::before {
+    content: '✓'; position: absolute; left: 0; top: 8px;
+    color: var(--sconto-green); font-weight: 700;
+  }
+
+  .bullet-list { list-style: none; padding: 0; }
+  .bullet-list li {
+    padding: 6px 0; padding-left: 20px; position: relative;
+    font-size: 14px; line-height: 1.6;
+  }
+  .bullet-list li::before {
+    content: '→'; position: absolute; left: 0; top: 6px;
+    color: var(--sconto-yellow); font-weight: 600;
+  }
+
+  /* ── SPECIAL SECTIONS ── */
+  .hero-center {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+  }
+  .hero-center h1 { font-size: clamp(36px, 5vw, 64px); }
+  .hero-center .subtitle { max-width: 600px; }
+
+  .split-content { display: flex; gap: 40px; flex: 1; align-items: flex-start; margin-top: 16px; }
+  .split-left { flex: 1; }
+  .split-right { flex: 1; }
+
+  .callout {
+    background: rgba(246,216,76,0.06); border-left: 3px solid var(--sconto-yellow);
+    padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 16px 0;
+    font-size: 14px;
+  }
+  .callout-red {
+    background: rgba(239,68,68,0.06); border-left: 3px solid var(--sconto-red);
+    padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 16px 0;
+    font-size: 14px;
+  }
+  .callout strong { color: var(--sconto-yellow); }
+  .callout-red strong { color: var(--sconto-red); }
+
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+
+  /* ── TECH LINKS ── */
+  a.tech-link {
+    color: var(--sconto-blue); text-decoration: none; border-bottom: 1px dashed rgba(0,101,255,0.4);
+    transition: color 0.2s, border-color 0.2s;
+  }
+  a.tech-link:hover { color: var(--sconto-yellow); border-color: var(--sconto-yellow); }
+  a.tech-link::after {
+    content: ' ↗'; font-size: 0.75em; opacity: 0.5;
+  }
+
+  /* ── NEW FOR TEAM BADGE ── */
+  .tag-new {
+    background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  /* ── PHASE CARDS ── */
+  .phase-card {
+    background: var(--sconto-surface); border: 1px solid var(--sconto-border);
+    border-radius: 12px; padding: 20px; position: relative;
+    border-top: 3px solid var(--sconto-yellow);
+  }
+  .phase-num {
+    font-size: 11px; font-weight: 700; color: var(--sconto-navy);
+    background: var(--sconto-yellow); border-radius: 4px;
+    padding: 2px 8px; display: inline-block; margin-bottom: 8px;
+  }
+
+  /* ── KEYBOARD HINT ── */
+  .keyboard-hint {
+    position: fixed; bottom: 24px; left: 30px; z-index: 100;
+    font-size: 11px; color: var(--sconto-muted);
+  }
+  .keyboard-hint kbd {
+    background: var(--sconto-surface); border: 1px solid var(--sconto-border);
+    padding: 2px 8px; border-radius: 4px; font-family: 'Poppins', sans-serif;
+    font-size: 11px;
+  }
+
+  /* ── PRINT ── */
+  @media print {
+    body { background: #fff; color: #222; overflow: visible; }
+    .slide { position: relative; opacity: 1; visibility: visible; transform: none;
+             page-break-after: always; height: auto; min-height: 100vh; }
+    .logo-bar, .nav-controls, .keyboard-hint, .progress-bar { display: none; }
+    .slide { padding: 40px; }
+    h1 { -webkit-text-fill-color: var(--sconto-navy); color: var(--sconto-navy); }
+    .card, .metric { border-color: #ddd; background: #fafafa; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGO BAR -->
+<div class="logo-bar">
+  <svg width="180" height="78" viewBox="0 0 183 79" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0H183V75C183 77.2091 181.209 79 179 79H4C1.79086 79 0 77.2091 0 75V0Z" fill="#F6D84C"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M26.0557 33.2328C26.0557 32.5214 26.1924 31.5741 27.1402 31.5741C27.8171 31.5741 28.2904 32.1154 28.3927 32.6908C28.8666 35.3967 30.7629 38.7451 33.7402 39.3543V41.3165C30.7948 41.2474 30.1523 40.0644 28.9345 40.0644C27.8493 40.0644 27.9513 41.1809 27.1051 41.1809C26.0557 41.1809 26.0557 39.9284 26.0557 39.7609V33.2328ZM43.7286 22.3064C43.7286 23.0844 43.5929 23.9295 42.6106 23.9295C41.7989 23.9295 41.4945 23.2869 41.3922 22.6105C41.0187 20.1076 38.9213 17.5365 36.2812 16.9617V15.0004C38.4127 15.0341 40.6818 16.319 41.0531 16.319C41.9337 16.319 41.8665 15.1019 42.7464 15.1019C43.7953 15.1019 43.7286 16.2518 43.7286 16.5222V22.3064ZM34.7559 16.9617C33.4703 17.4014 32.3529 18.3488 32.3529 19.735C32.3529 21.3934 33.2676 22.4086 37.2972 23.9639C43.2876 26.2637 44.642 29.4431 44.642 32.5564C44.642 37.7984 40.2736 41.2152 35.2652 41.3165V39.3543C36.889 38.8476 38.2766 38.1031 38.3445 36.2424C38.4127 34.1114 35.9089 33.2328 34.2842 32.5214C30.0181 30.7299 26.0557 28.8011 26.0557 23.4904C26.0557 18.3488 29.7813 15.1691 34.7559 15.0004V16.9617Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M56.3179 41.3165C48.8695 41.1808 45.3491 35.5326 45.3491 28.5982C45.3491 20.7848 49.7501 15.2372 56.3179 15V16.961C54.6925 17.3004 54.1514 18.6876 54.1514 20.1075V36.1414C54.1514 37.5608 54.6925 38.9482 56.3179 39.3542V41.3165ZM64.5105 33.4691C65.1533 33.4691 65.5262 34.0098 65.5262 34.619C65.4583 37.392 61.3617 41.4515 57.8407 41.3165V39.3542C60.4486 38.7791 62.648 37.0535 63.3925 34.5518C63.5958 33.976 63.8001 33.4691 64.5105 33.4691ZM57.8407 15C59.0941 15.0347 61.6995 16.3524 62.5807 16.3524C63.0884 16.3524 63.2924 16.1496 63.4938 15.7104C63.6987 15.271 63.9361 15 64.4082 15C65.4911 15 65.4911 16.0496 65.4911 16.2171V24.0661C65.4911 24.2348 65.4911 25.2835 64.4082 25.2835C63.6987 25.2835 63.2924 24.7077 63.1553 24.0661C62.5807 21.3256 60.9891 17.808 57.8407 16.961V15Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M78.1803 39.3543C79.771 38.7792 79.9061 37.7649 79.9061 36.9188V19.3959C79.9061 18.552 79.771 17.5365 78.1803 16.9614V15.0004C85.3575 15.642 88.7074 21.4266 88.7074 28.1584C88.7074 34.8888 85.3575 40.6736 78.1803 41.3165V39.3543ZM76.6557 16.9614C75.0647 17.5365 74.9296 18.552 74.9296 19.3959V36.9188C74.9296 37.7649 75.0647 38.7792 76.6557 39.3543V41.3165C69.4801 40.6736 66.1289 34.8888 66.1289 28.1584C66.1289 21.4266 69.4801 15.642 76.6557 15.0004V16.9614Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M108.884 32.6233V40.8085H103.839L91.4512 19.4646C90.9081 18.5178 90.7392 18.0105 89.6215 17.6373C89.046 17.4348 88.6058 17.3001 88.6058 16.5556C88.6058 15.5423 89.6215 15.5423 90.3326 15.5076H99.0337L108.884 32.6233ZM106.921 21.6293C106.921 16.7928 104.145 18.0774 104.145 16.5221C104.145 15.5748 105.262 15.5076 105.602 15.5076H110.205C110.542 15.5076 111.66 15.5748 111.66 16.5221C111.66 18.0774 108.884 16.7928 108.884 21.6293V29.8493H108.817L106.921 26.4324V21.6293ZM91.2463 21.8659H91.3135L93.2111 25.2484V35.4644C93.751 39.6927 95.9184 38.374 95.9184 39.8274C95.9184 40.877 94.5308 40.8085 94.157 40.8085H90.2991C89.9265 40.8085 88.5386 40.877 88.5386 39.8274C88.5386 38.374 90.7057 39.6927 91.2463 35.4644V21.8659Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M112.433 15.5075H117.307V17.4688C115.548 18.7203 115.073 20.9529 114.77 22.7454C114.668 23.4902 114.499 24.3692 113.551 24.3692C112.535 24.3692 112.433 23.5243 112.433 23.388V15.5075ZM133.524 23.388C133.524 23.5243 133.424 24.3692 132.406 24.3692C131.46 24.3692 131.291 23.4902 131.189 22.7454C130.884 20.9529 130.412 18.7203 128.65 17.4688V15.5075H133.524V23.388ZM118.832 15.5075H127.126V37.0199C127.126 38.2717 127.091 38.4749 128.277 38.8478C128.716 38.9819 129.022 39.2872 129.022 39.7605C129.022 40.7413 127.905 40.8085 127.769 40.8085H118.189C118.054 40.8085 116.936 40.7413 116.936 39.7605C116.936 39.2872 117.24 38.9819 117.678 38.8478C118.867 38.4749 118.832 38.2717 118.832 37.0199V15.5075Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M146.172 39.3543C147.764 38.7792 147.899 37.7649 147.899 36.9188V19.3959C147.899 18.552 147.764 17.5365 146.172 16.9614V15.0004C153.349 15.642 156.699 21.4266 156.699 28.1584C156.699 34.8888 153.349 40.6736 146.172 41.3165V39.3543ZM144.65 16.9614C143.059 17.5365 142.922 18.552 142.922 19.3959V36.9188C142.922 37.7649 143.059 38.7792 144.65 39.3543V41.3165C137.472 40.6736 134.123 34.8888 134.123 28.1584C134.123 21.4266 137.472 15.642 144.65 15.0004V16.9614Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M36.4508 59.33V63.5343H33.86L27.4956 52.5707C27.2172 52.084 27.1299 51.8233 26.5571 51.6327C26.2603 51.5283 26.0344 51.4583 26.0344 51.0766C26.0344 50.5559 26.5571 50.5559 26.9219 50.5378H31.3904L36.4508 59.33ZM35.4426 53.6831C35.4426 51.1985 34.0171 51.859 34.0171 51.0591C34.0171 50.5728 34.5908 50.5378 34.7641 50.5378H37.1289C37.3032 50.5378 37.8772 50.5728 37.8772 51.0591C37.8772 51.859 36.4508 51.1985 36.4508 53.6831V57.9048H36.417L35.4426 56.1501V53.6831ZM27.3914 53.8043H27.4264L28.3996 55.5421V60.7894C28.6774 62.9613 29.7913 62.2828 29.7913 63.0304C29.7913 63.569 29.0778 63.5343 28.8873 63.5343H26.9037C26.7132 63.5343 26 63.569 26 63.0304C26 62.2828 27.1136 62.9613 27.3914 60.7894V53.8043Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M51.4918 60.1639H48.9537L49.1967 59.1559H51.3176L49.5611 51.4764L49.7876 50.5381H53.6305L56.24 61.5189C56.3429 62.0052 56.3598 62.3353 56.8475 62.5444C57.0899 62.6478 57.2823 62.7694 57.2823 63.0826C57.2823 63.5515 56.6563 63.5343 56.3257 63.5343H51.9954C51.6488 63.5343 51.1446 63.4996 51.1446 63.0482C51.1446 62.7694 51.2478 62.6835 51.4737 62.5616C51.9263 62.3006 51.9954 62.179 51.8393 61.5017L51.4918 60.1639ZM49.6306 54.9342L47.9964 60.8756C47.718 61.9355 47.9614 62.2312 48.5529 62.4919C48.8304 62.6138 49.0741 62.7175 49.0741 63.0654C49.0741 63.5514 48.5179 63.5343 48.1704 63.5343H46.1709C45.8227 63.5343 45.1968 63.5174 45.1968 63.0126C45.1968 62.5966 45.4921 62.6138 45.8753 62.4222C46.24 62.2312 46.7099 61.8314 47.0402 60.5978L49.1276 52.9707H49.1786L49.6306 54.9342ZM53.9949 47.0287L52.2047 49.7389H50.2406L51.1265 47.0287H53.9949Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M70.731 50.5381H71.2713C72.3661 50.5381 73.4791 50.556 74.4873 51.042C75.5655 51.5805 76.1918 52.4838 76.1918 53.7178C76.1918 55.6285 74.5911 56.5149 72.9048 56.7756V56.8103C74.8348 57.1225 76.366 57.9748 76.366 60.1468C76.366 61.3799 75.8264 62.3528 74.73 62.9611C73.6177 63.5859 72.5222 63.5343 71.2875 63.5343H70.731V62.5269C71.8963 62.4747 72.0355 61.8137 72.0355 61.1886V58.9472C72.0355 58.1489 71.8443 57.4013 70.731 57.3147V56.3067C72.0007 56.2023 72.0355 55.4553 72.0355 54.8124V53.0746C72.0355 52.345 71.7749 51.6499 70.731 51.5461V50.5381ZM69.9493 63.5343H65.2709C65.1495 63.5343 64.7153 63.4996 64.7153 62.9958C64.7153 62.7523 64.8708 62.5966 65.0967 62.5269C65.7063 62.3353 65.6882 62.2313 65.6882 61.588V52.4838C65.6882 51.8412 65.7063 51.7371 65.0967 51.5461C64.8708 51.4764 64.7153 51.3199 64.7153 51.077C64.7153 50.5732 65.1495 50.5381 65.2709 50.5381H69.9493V63.5343Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M87.6068 58.4956L84.9817 52.275C84.8597 51.9634 84.7733 51.7374 84.4768 51.5462C84.2506 51.424 84.0776 51.3374 84.0776 51.042C84.0776 50.5035 84.6341 50.5382 84.9992 50.5382H89.2941C89.6764 50.5382 90.2504 50.5035 90.2504 51.0592C90.2504 51.3199 90.0583 51.459 89.8681 51.5805C89.6764 51.6849 89.5384 51.7553 89.5384 51.9978C89.5384 52.2235 89.6244 52.4495 89.7117 52.6579L91.8673 57.5751V61.588C91.8673 62.2313 91.8504 62.3354 92.4594 62.5266C92.685 62.5963 92.8408 62.7523 92.8408 62.9958C92.8408 63.4996 92.2677 63.5343 92.1989 63.5343H87.2765C87.2073 63.5343 86.6339 63.4996 86.6339 62.9958C86.6339 62.7523 86.7903 62.5963 87.0162 62.5266C87.6249 62.3354 87.6068 62.2313 87.6068 61.588V58.4956ZM91.6765 55.3859L92.5802 53.3699C92.7203 53.0746 92.8408 52.7973 92.8408 52.4495C92.8408 51.4064 91.659 51.789 91.659 51.077C91.659 50.4513 92.3715 50.5382 92.7888 50.5382H94.7189C95.1196 50.5382 95.606 50.5729 95.606 51.0939C95.606 51.3893 95.4149 51.5105 95.1718 51.6156C94.4586 51.9109 94.2675 52.1716 93.9372 52.8842L92.2336 56.6196L91.6765 55.3859Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M103.727 50.5378H106.23V51.5458C105.325 52.1881 105.082 53.3352 104.926 54.256C104.875 54.6389 104.787 55.0903 104.3 55.0903C103.779 55.0903 103.727 54.6555 103.727 54.5864V50.5378ZM114.56 54.5864C114.56 54.6555 114.507 55.0903 113.986 55.0903C113.498 55.0903 113.411 54.6389 113.36 54.256C113.203 53.3352 112.96 52.1881 112.055 51.5458V50.5378H114.56V54.5864ZM107.012 50.5378H111.273V61.588C111.273 62.2313 111.255 62.3354 111.864 62.5269C112.09 62.5967 112.246 62.7523 112.246 62.9955C112.246 63.4993 111.673 63.534 111.603 63.534H106.682C106.612 63.534 106.039 63.4993 106.039 62.9955C106.039 62.7523 106.196 62.5967 106.421 62.5269C107.031 62.3354 107.012 62.2313 107.012 61.588V50.5378Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M129.452 62.5271C130.86 62.3527 131.939 61.3975 132.409 60.0072C132.53 59.7466 132.634 59.469 132.947 59.469C133.503 59.469 133.452 59.9903 133.452 60.0591V63.5341H129.452V62.5271ZM129.452 56.3409C130.182 56.1499 130.513 55.4729 130.67 54.8122C130.756 54.5171 130.86 54.239 131.226 54.239C131.765 54.239 131.678 54.8638 131.678 55.0035V58.7561C131.678 58.8958 131.765 59.5209 131.226 59.5209C130.86 59.5209 130.756 59.243 130.67 58.9473C130.513 58.2872 130.182 57.6096 129.452 57.4189V56.3409ZM129.452 50.538H133.33V54.0649C133.33 54.1524 133.312 54.4821 132.791 54.4821C132.496 54.4821 132.409 54.308 132.321 54.0474C131.869 52.6405 130.982 51.7891 129.452 51.5457V50.538ZM124.079 50.538H128.67V63.5341H124.079C124.01 63.5341 123.436 63.4991 123.436 62.9956C123.436 62.7524 123.593 62.5968 123.817 62.5271C124.427 62.3355 124.409 62.2314 124.409 61.5878V52.4836C124.409 51.8413 124.427 51.7372 123.817 51.5457C123.593 51.4766 123.436 51.32 123.436 51.0765C123.436 50.5733 124.01 50.538 124.079 50.538Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M146.572 61.5878C146.572 62.2314 146.555 62.3355 147.163 62.5271C147.389 62.5968 147.546 62.7524 147.546 62.9959C147.546 63.4991 146.971 63.5344 146.903 63.5344H141.98C141.912 63.5344 141.338 63.4991 141.338 62.9959C141.338 62.7524 141.495 62.5968 141.721 62.5271C142.329 62.3355 142.312 62.2314 142.312 61.5878V52.4836C142.312 51.841 142.329 51.7369 141.721 51.546C141.495 51.4763 141.338 51.3197 141.338 51.0765C141.338 50.5733 141.912 50.538 141.98 50.538H146.903C146.971 50.538 147.546 50.5733 147.546 51.0765C147.546 51.3197 147.389 51.4763 147.163 51.546C146.555 51.7369 146.572 51.841 146.572 52.4836V61.5878ZM153.128 61.6403C153.285 62.0226 153.336 62.3183 153.736 62.5096C153.996 62.6311 154.153 62.7349 154.153 63.0656C154.153 63.5688 153.58 63.5344 153.233 63.5344H148.867C148.467 63.5344 147.945 63.5344 147.945 62.9959C147.945 62.422 148.659 62.5271 148.659 62.1442C148.659 62.0051 148.572 61.745 148.519 61.6235L147.442 58.3919C147.337 58.0615 147.215 57.6965 147.215 57.3317C147.215 56.967 147.406 56.7404 147.615 56.4456L149.632 53.5795C149.875 53.2485 150.084 52.9012 150.084 52.4836C150.084 52.0151 149.84 51.7723 149.423 51.5982C149.146 51.4763 148.884 51.4069 148.884 51.0593C148.884 50.5211 149.371 50.538 149.736 50.538H152.71C153.128 50.538 153.631 50.5558 153.631 51.1112C153.631 51.5113 153.301 51.6329 152.988 51.7548C151.789 52.2061 151.389 52.8662 150.658 53.8573L150.327 54.308L153.128 61.6403Z" fill="#202330"/>
+  </svg>
+  <div class="slide-counter"><span id="currentSlide">1</span> / <span id="totalSlides">17</span></div>
+</div>
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar" id="progressBar" style="width: 5.5%"></div>
+
+<!-- SLIDE DECK -->
+<div class="slide-deck" id="deck">
+
+<!-- ═══════════ SLIDE 1: TITLE ═══════════ -->
+<div class="slide active" data-slide="1">
+  <div class="hero-center">
+    <div class="badge-row" style="justify-content:center; margin-bottom: 20px;">
+      <span class="tag tag-yellow">Architektura 2026</span>
+      <span class="tag tag-blue">Interní dokument</span>
+    </div>
+    <h1>Microservices<br>pro Sconto</h1>
+    <p class="subtitle">Sdílené služby mezi E-shopem a POS systémy na jednom místě — neudržovat 2×, ale extrahovat do společných microservices na AWS ECS Fargate.</p>
+    <div style="margin-top: 32px; display:flex; gap:16px; justify-content:center;">
+      <div class="metric" style="min-width:140px;">
+        <div class="metric-value">4</div>
+        <div class="metric-label">Microservices</div>
+      </div>
+      <div class="metric" style="min-width:140px;">
+        <div class="metric-value">ECS</div>
+        <div class="metric-label">Fargate</div>
+      </div>
+      <div class="metric" style="min-width:140px;">
+        <div class="metric-value">~$100</div>
+        <div class="metric-label">/měsíc infra (nízké)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 2: SOUČASNÝ STAV ═══════════ -->
+<div class="slide" data-slide="2">
+  <h3>Kde jsme dnes</h3>
+  <h2>Shopsys monolit — současná architektura</h2>
+  <div class="diagram-container">
+    <svg viewBox="0 0 900 420" width="900">
+      <rect class="node-rect" x="40" y="20" width="150" height="50"/>
+      <text class="node-label" x="115" y="42" text-anchor="middle">Web Admin</text>
+      <text class="node-sublabel" x="115" y="56" text-anchor="middle">Twig</text>
+      <rect class="node-rect" x="230" y="20" width="150" height="50"/>
+      <text class="node-label" x="305" y="42" text-anchor="middle">Web Frontend</text>
+      <text class="node-sublabel" x="305" y="56" text-anchor="middle">Next.js (headless)</text>
+      <rect class="node-rect" x="420" y="20" width="170" height="50"/>
+      <text class="node-label" x="505" y="42" text-anchor="middle">Integrační můstek</text>
+      <text class="node-sublabel" x="505" y="56" text-anchor="middle">IM · ECS · vpc-037</text>
+      <line class="conn-line" x1="115" y1="70" x2="330" y2="130"/>
+      <line class="conn-line" x1="305" y1="70" x2="330" y2="130"/>
+      <line class="conn-line" x1="505" y1="70" x2="330" y2="130"/>
+      <rect class="highlight-rect" x="140" y="120" width="380" height="80"/>
+      <text class="node-label" x="330" y="152" text-anchor="middle" style="font-size:16px">Shopsys Monolit</text>
+      <text class="node-sublabel" x="330" y="172" text-anchor="middle" style="font-size:11px">PHP 8.3 · Symfony 6.4 LTS · GraphQL API</text>
+      <text class="node-sublabel" x="330" y="188" text-anchor="middle" style="font-size:10px; fill:var(--sconto-yellow)">EKS Kubernetes · 5 PHP instancí · 4 Next.js frontend instancí</text>
+      <line class="conn-line" x1="210" y1="200" x2="130" y2="260"/>
+      <line class="conn-line" x1="280" y1="200" x2="280" y2="260"/>
+      <line class="conn-line" x1="370" y1="200" x2="440" y2="260"/>
+      <line class="conn-line" x1="450" y1="200" x2="580" y2="260"/>
+      <rect class="node-rect" x="50" y="260" width="160" height="55"/>
+      <text class="node-label" x="130" y="284" text-anchor="middle">Aurora PostgreSQL</text>
+      <text class="node-sublabel" x="130" y="300" text-anchor="middle">Primární databáze</text>
+      <rect class="node-rect" x="230" y="260" width="120" height="55"/>
+      <text class="node-label" x="290" y="284" text-anchor="middle">Redis</text>
+      <text class="node-sublabel" x="290" y="300" text-anchor="middle">Cache, sessions</text>
+      <rect class="node-rect" x="370" y="260" width="150" height="55"/>
+      <text class="node-label" x="445" y="284" text-anchor="middle">Elasticsearch</text>
+      <text class="node-sublabel" x="445" y="300" text-anchor="middle">Hledání produktů</text>
+      <rect class="node-rect" x="540" y="260" width="120" height="55"/>
+      <text class="node-label" x="600" y="284" text-anchor="middle">RabbitMQ</text>
+      <text class="node-sublabel" x="600" y="300" text-anchor="middle">Fronty zpráv</text>
+      <line class="conn-animated" x1="600" y1="315" x2="600" y2="360"/>
+      <rect class="node-rect" x="530" y="360" width="140" height="45"/>
+      <text class="node-label" x="600" y="382" text-anchor="middle">Workers</text>
+      <text class="node-sublabel" x="600" y="396" text-anchor="middle">6× product-recalc</text>
+      <rect class="node-rect" x="680" y="20" width="180" height="50"/>
+      <text class="node-label" x="770" y="42" text-anchor="middle">CloudFront CDN</text>
+      <text class="node-sublabel" x="770" y="56" text-anchor="middle">.cz + .sk distribuce</text>
+      <path class="conn-line" d="M680,45 L570,45 L570,45"/>
+      <rect class="node-rect" x="680" y="160" width="180" height="50"/>
+      <text class="node-label" x="770" y="182" text-anchor="middle">Akeneo PIM</text>
+      <text class="node-sublabel" x="770" y="196" text-anchor="middle">Správa produktových dat</text>
+      <line class="conn-blue" x1="520" y1="160" x2="680" y2="180"/>
+      <text class="vpc-label" x="50" y="410" style="font-size:10px">vpc-016 (ECOM) · EKS Kubernetes · 3 servery · 47 běžících procesů</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 3: PROČ MICROSERVICES ═══════════ -->
+<div class="slide" data-slide="3">
+  <h3>Motivace</h3>
+  <h2>Proč microservices pro Sconto?</h2>
+  <div class="grid-2">
+    <div>
+      <h3 style="color:var(--sconto-red); margin-top:16px">Problémy monolitu</h3>
+      <ul class="bullet-list" style="margin-top:12px">
+        <li>Každý deploy = nasazení celého Shopsys (risky)</li>
+        <li>Emaily, PDF, platby — vše svázané v jednom repozitáři</li>
+        <li>Selhání jedné funkce může shodit celý e-shop</li>
+        <li>Nové funkcionality musí čekat na celkový release</li>
+        <li>Frontend tým přetížený — tvořit UI pro každou funkci zvlášť je nereálné</li>
+      </ul>
+      <div class="callout-red" style="margin-top:20px">
+        <strong>Realita týmu:</strong> PHP vývojáři (celý tým), žádný DevOps, FE přetížení. Musíme zůstat v Symfony ekosystému.
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--sconto-green); margin-top:16px">Co nám microservices dají</h3>
+      <ul class="check-list" style="margin-top:12px">
+        <li>Nezávislý deploy — nasadíme jen email service, nic jiného se nehne</li>
+        <li>Izolace selhání — pád PDF generátoru neovlivní e-shop</li>
+        <li>Škálovatelnost — platby můžeme škálovat nezávisle na zbytku</li>
+        <li>Rychlejší vývoj — každý service = vlastní repo, vlastní testy, vlastní CI/CD</li>
+        <li>ECS Fargate — jednodušší než Kubernetes, méně práce s údržbou</li>
+      </ul>
+      <div class="callout" style="margin-top:20px">
+        <strong>Klíčové rozhodnutí:</strong> ECS Fargate místo Kubernetes — tým nemá DevOps kapacitu na správu Kubernetes.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 4: CÍLOVÁ ARCHITEKTURA ═══════════ -->
+<div class="slide" data-slide="4">
+  <h3>Cílová architektura</h3>
+  <h2>AWS ECS Fargate — přehled systému</h2>
+  <div class="diagram-container">
+    <svg viewBox="0 0 960 520" width="960">
+      <!-- INTERNET -->
+      <text class="node-label" x="480" y="18" text-anchor="middle" style="fill:var(--sconto-muted);font-size:11px">INTERNET</text>
+      <rect class="node-rect" x="340" y="28" width="280" height="35"/>
+      <text class="node-label" x="480" y="50" text-anchor="middle">CloudFront CDN → ECOM ALB</text>
+
+      <!-- ═══ VPC-016 · ECOM ═══ -->
+      <rect class="vpc-rect" x="15" y="75" width="280" height="200"/>
+      <text class="vpc-label" x="30" y="92">vpc-016 · ECOM</text>
+      <rect class="highlight-rect" x="30" y="105" width="250" height="80"/>
+      <text class="node-label" x="155" y="128" text-anchor="middle" style="font-size:13px">E-shop (Shopsys)</text>
+      <text class="node-sublabel" x="155" y="143" text-anchor="middle">EKS · PHP 8.3 · Symfony 6.4</text>
+      <text class="node-sublabel" x="155" y="158" text-anchor="middle">GraphQL · 5× PHP-FPM</text>
+      <text class="node-sublabel" x="155" y="190" text-anchor="middle" style="font-size:9px;fill:var(--sconto-muted)">PostgreSQL · Redis · Elasticsearch · RabbitMQ</text>
+      <text class="node-sublabel" x="155" y="260" text-anchor="middle" style="font-size:9px;fill:var(--sconto-muted)">4× Next.js storefront · 6× worker</text>
+
+      <!-- ═══ VPC-037 · MICRO + IM + POS ═══ -->
+      <rect class="vpc-rect" x="360" y="75" width="585" height="360"/>
+      <text class="vpc-label" x="375" y="92">vpc-037 · MICRO + IM + POS</text>
+
+      <!-- POS box -->
+      <rect class="node-rect" x="375" y="105" width="110" height="50"/>
+      <text class="node-label" x="430" y="125" text-anchor="middle" style="font-size:11px">POS</text>
+      <text class="node-sublabel" x="430" y="142" text-anchor="middle">Obch. domy</text>
+
+      <!-- IM box -->
+      <rect class="node-rect" x="375" y="170" width="110" height="50"/>
+      <text class="node-label" x="430" y="190" text-anchor="middle" style="font-size:11px">IM</text>
+      <text class="node-sublabel" x="430" y="207" text-anchor="middle">Integr. můstek</text>
+
+      <!-- Cognito -->
+      <rect class="node-rect" x="510" y="105" width="55" height="40" style="stroke:var(--sconto-yellow)"/>
+      <text class="node-sublabel" x="537" y="123" text-anchor="middle" style="fill:var(--sconto-yellow);font-size:9px">Cognito</text>
+      <text class="node-sublabel" x="537" y="135" text-anchor="middle" style="font-size:8px">JWT</text>
+
+      <!-- ALB -->
+      <rect class="node-rect" x="580" y="105" width="280" height="40" style="stroke:var(--sconto-blue)"/>
+      <text class="node-label" x="720" y="129" text-anchor="middle" style="fill:var(--sconto-blue)">ALB (rozdělovač provozu)</text>
+
+      <!-- ECS cluster -->
+      <rect style="fill:rgba(0,101,255,0.04);stroke:rgba(0,101,255,0.2);stroke-width:1;stroke-dasharray:6 3;rx:8" x="510" y="160" width="420" height="135"/>
+      <text style="fill:var(--sconto-blue);font-family:'Poppins';font-size:10px;font-weight:600;opacity:0.7" x="525" y="175">ECS cluster „micro-dev" (Fargate)</text>
+
+      <rect class="node-rect" x="525" y="185" width="185" height="42"/>
+      <text class="node-label" x="617" y="202" text-anchor="middle" style="font-size:11px">Notifikační emaily</text>
+      <text class="node-sublabel" x="617" y="218" text-anchor="middle">Mailersend</text>
+
+      <rect class="node-rect" x="725" y="185" width="185" height="42"/>
+      <text class="node-label" x="817" y="202" text-anchor="middle" style="font-size:11px">PDF Generátor</text>
+      <text class="node-sublabel" x="817" y="218" text-anchor="middle">PDF.co API</text>
+
+      <rect class="node-rect" x="525" y="240" width="185" height="42"/>
+      <text class="node-label" x="617" y="257" text-anchor="middle" style="font-size:11px">ČS Platby</text>
+      <text class="node-sublabel" x="617" y="273" text-anchor="middle">Erste Open Banking</text>
+
+      <rect class="node-rect" x="725" y="240" width="185" height="42"/>
+      <text class="node-label" x="817" y="257" text-anchor="middle" style="font-size:11px">Nadlimitní obj.</text>
+      <text class="node-sublabel" x="817" y="273" text-anchor="middle">CategoryOverlimits</text>
+
+      <!-- ALB → services -->
+      <line class="conn-blue" x1="650" y1="145" x2="617" y2="185"/>
+      <line class="conn-blue" x1="750" y1="145" x2="817" y2="185"/>
+      <line class="conn-blue" x1="650" y1="145" x2="617" y2="240"/>
+      <line class="conn-blue" x1="750" y1="145" x2="817" y2="240"/>
+
+      <!-- Shared infra -->
+      <rect class="ok-rect" x="510" y="310" width="110" height="40"/>
+      <text class="node-label" x="565" y="328" text-anchor="middle" style="font-size:10px">Aurora DB</text>
+      <text class="node-sublabel" x="565" y="342" text-anchor="middle">Sdílená</text>
+
+      <rect class="ok-rect" x="630" y="310" width="80" height="40"/>
+      <text class="node-label" x="670" y="328" text-anchor="middle" style="font-size:10px">Redis</text>
+      <text class="node-sublabel" x="670" y="342" text-anchor="middle">Cache</text>
+
+      <rect class="ok-rect" x="720" y="310" width="80" height="40"/>
+      <text class="node-label" x="760" y="328" text-anchor="middle" style="font-size:10px">S3</text>
+      <text class="node-sublabel" x="760" y="342" text-anchor="middle">Soubory</text>
+
+      <rect class="ok-rect" x="810" y="310" width="120" height="40"/>
+      <text class="node-label" x="870" y="328" text-anchor="middle" style="font-size:10px">SSM</text>
+      <text class="node-sublabel" x="870" y="342" text-anchor="middle">Trezor hesel</text>
+
+      <line class="conn-line" x1="617" y1="282" x2="565" y2="310" style="stroke-dasharray:3 5"/>
+      <line class="conn-line" x1="817" y1="282" x2="670" y2="310" style="stroke-dasharray:3 5"/>
+
+      <!-- Dashboard -->
+      <rect class="node-rect" x="560" y="365" width="280" height="30" style="stroke:var(--sconto-green)"/>
+      <text class="node-label" x="700" y="385" text-anchor="middle" style="font-size:11px;fill:var(--sconto-green)">Next.js Dashboard (společný UI)</text>
+
+      <!-- Connections POS/IM → ALB -->
+      <line class="conn-animated" x1="485" y1="130" x2="510" y2="125"/>
+      <line class="conn-animated" x1="485" y1="195" x2="510" y2="135"/>
+
+      <!-- ═══ VPC-0E4 · AZAP + PIM + VYDEJ ═══ -->
+      <rect class="vpc-rect" x="15" y="295" width="280" height="140"/>
+      <text class="vpc-label" x="30" y="312">vpc-0e4 · AZAP + PIM + VYDEJ</text>
+      <rect class="node-rect" x="30" y="325" width="120" height="40"/>
+      <text class="node-label" x="90" y="343" text-anchor="middle" style="font-size:11px">Akeneo PIM</text>
+      <text class="node-sublabel" x="90" y="357" text-anchor="middle">Produktová data</text>
+      <rect class="node-rect" x="160" y="325" width="55" height="40"/>
+      <text class="node-label" x="187" y="343" text-anchor="middle" style="font-size:10px">AZAP</text>
+      <text class="node-sublabel" x="187" y="357" text-anchor="middle" style="font-size:8px">ERP</text>
+      <rect class="node-rect" x="225" y="325" width="55" height="40"/>
+      <text class="node-label" x="252" y="343" text-anchor="middle" style="font-size:10px">Výdej</text>
+      <text class="node-sublabel" x="252" y="357" text-anchor="middle" style="font-size:8px">Sklady</text>
+      <text class="node-sublabel" x="155" y="420" text-anchor="middle" style="font-size:9px;fill:var(--sconto-muted)">Oddělené systémy — vlastní DB, vlastní infra</text>
+
+      <!-- VPC PEERING WARNING -->
+      <rect class="warning-rect" x="295" y="175" width="65" height="55"/>
+      <text style="fill:var(--sconto-red);font-family:'Poppins';font-size:16px;font-weight:800" x="327" y="198" text-anchor="middle">✕</text>
+      <text style="fill:var(--sconto-red);font-family:'Poppins';font-size:7px;font-weight:600" x="327" y="215" text-anchor="middle">VPC PEERING</text>
+      <text style="fill:var(--sconto-red);font-family:'Poppins';font-size:7px" x="327" y="224" text-anchor="middle">CHYBÍ</text>
+      <line style="stroke:var(--sconto-red);stroke-width:2;stroke-dasharray:6 4" x1="280" y1="195" x2="295" y2="195"/>
+      <line style="stroke:var(--sconto-red);stroke-width:2;stroke-dasharray:6 4" x1="360" y1="195" x2="375" y2="195"/>
+
+      <!-- Connection E-shop → ALB (blocked) -->
+      <line class="conn-animated" x1="280" y1="140" x2="295" y2="185" style="stroke:var(--sconto-red)"/>
+    </svg>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 5: 4 MICROSERVICES ═══════════ -->
+<div class="slide" data-slide="5">
+  <h3>Plánované služby</h3>
+  <h2>4 microservices — od boilerplatu po nové služby</h2>
+  <div class="grid-2" style="margin-top:24px">
+    <div class="card" style="border-top: 3px solid var(--sconto-yellow)">
+      <div class="card-number">01</div>
+      <div class="card-title">Boilerplate — CategoryOverlimits</div>
+      <div class="card-desc">
+        Základ pro všechny služby. Hotový boilerplate od Lukáše Šenfelda — <strong style="color:#fff">Symfony 7.2</strong>, Doctrine ORM 3.x, PHPUnit 12, sconto packages.
+        Docker balíček připravený v AWS. Šablona, ze které klonujeme nové služby.
+      </div>
+      <div class="card-tag"><span class="tag tag-yellow">Boilerplate ready</span></div>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--sconto-green)">
+      <div class="card-number">02</div>
+      <div class="card-title">Notifikační emaily</div>
+      <div class="card-desc">
+        Transakční a notifikační emaily. Integrace s <a class="tech-link" href="https://www.mailersend.com/" target="_blank"><strong style="color:#fff">Mailersend</strong></a> API.
+        Odesílání na pozadí přes frontu — selhání neovlivní e-shop.
+        Nejnižší riziko — žádné DB zápisy směrem ven.
+      </div>
+      <div class="card-tag"><span class="tag tag-green">Nejnižší riziko</span></div>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--sconto-blue)">
+      <div class="card-number">03</div>
+      <div class="card-title">PDF Generátor</div>
+      <div class="card-desc">
+        Generování faktur, záloh a dalších PDF dokumentů. Orchestrační vrstva: šablony + data → <a class="tech-link" href="https://pdf.co/" target="_blank"><strong style="color:#fff">PDF.co</strong></a> API → hotové PDF.
+        Jasný vstup/výstup, minimální závislosti na monolitu.
+      </div>
+      <div class="card-tag"><span class="tag tag-blue">Samostatný</span></div>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--sconto-orange)">
+      <div class="card-number">04</div>
+      <div class="card-title">ČS Platby</div>
+      <div class="card-desc">
+        QR kód generátor (SPAYD formát) + ověření stavu platby. Integrace s <a class="tech-link" href="https://developers.erstegroup.com/" target="_blank"><strong style="color:#fff">Erste Open Banking API</strong></a> (PSD2).
+        Ochrana proti dvojitým platbám (idempotence). Automatické notifikace od banky (webhooky).
+      </div>
+      <div class="card-tag"><span class="tag tag-orange">Compliance</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 6: TECH STACK ═══════════ -->
+<div class="slide" data-slide="6">
+  <h3>Technologie</h3>
+  <h2>Tech stack — co použijeme a proč</h2>
+  <div class="split-content">
+    <div class="split-left">
+      <table class="s-table">
+        <tr><th>Komponenta</th><th>Technologie</th><th></th></tr>
+        <tr><td>Jazyk</td><td><a class="tech-link" href="https://www.php.net/releases/8.3/" target="_blank"><strong>PHP 8.3+</strong></a></td><td></td></tr>
+        <tr><td>Framework</td><td><a class="tech-link" href="https://symfony.com/releases/7.2" target="_blank"><strong>Symfony 7.2</strong></a></td><td></td></tr>
+        <tr><td>ORM</td><td><a class="tech-link" href="https://www.doctrine-project.org/projects/orm.html" target="_blank"><strong>Doctrine ORM 3.x</strong></a></td><td></td></tr>
+        <tr><td>API vrstva</td><td><a class="tech-link" href="https://api-platform.com/" target="_blank"><strong>API Platform</strong></a></td><td><span class="tag tag-new">NOVÉ PRO TÝM</span></td></tr>
+        <tr><td>Async zprávy</td><td><a class="tech-link" href="https://symfony.com/doc/current/messenger.html" target="_blank"><strong>Symfony Messenger</strong></a></td><td></td></tr>
+        <tr><td>Testy</td><td><a class="tech-link" href="https://phpunit.de/" target="_blank"><strong>PHPUnit 12</strong></a></td><td></td></tr>
+        <tr><td>Kvalita kódu</td><td><a class="tech-link" href="https://phpstan.org/" target="_blank"><strong>PHPStan</strong></a> + ECS</td><td></td></tr>
+        <tr><td>Container</td><td><a class="tech-link" href="https://aws.amazon.com/fargate/" target="_blank"><strong>ECS Fargate</strong></a></td><td><span class="tag tag-new">NOVÉ PRO TÝM</span></td></tr>
+        <tr><td>API dokumentace</td><td><a class="tech-link" href="https://scalar.com/" target="_blank"><strong>Scalar</strong></a></td><td></td></tr>
+        <tr><td>CI/CD</td><td><a class="tech-link" href="https://docs.gitlab.com/ci/" target="_blank"><strong>GitLab CI</strong></a></td><td></td></tr>
+      </table>
+    </div>
+    <div class="split-right">
+      <div class="callout">
+        <strong>Proč Symfony 7.2?</strong><br>
+        Boilerplate je o generaci napřed oproti monolitu (Symfony 6.4 LTS). Microservices nemají závislost na Shopsys packages — můžeme jít na novější verzi.
+      </div>
+      <div class="callout" style="margin-top:12px">
+        <strong>Proč API Platform?</strong><br>
+        Entita + <code>#[ApiResource]</code> atribut = kompletní API (čtení, vytváření, editace, mazání). Automatická dokumentace, stránkování, filtrování — vše zabudované. Šetří 80% kódu oproti ručním controllerům.
+      </div>
+      <h3 style="margin-top:20px; color:var(--sconto-red)">Co je pro tým nové?</h3>
+      <ul class="bullet-list">
+        <li><a class="tech-link" href="https://api-platform.com/" target="_blank">API Platform</a> — tým nikdy nepoužíval, ale drasticky zrychlí vývoj API</li>
+        <li><a class="tech-link" href="https://aws.amazon.com/fargate/" target="_blank">ECS Fargate</a> — místo Kubernetes (jednodušší, bez DevOps overhead)</li>
+        <li><a class="tech-link" href="https://aws.amazon.com/cognito/" target="_blank">AWS Cognito</a> — autentizace bez PHP kódu (ALB řeší za nás)</li>
+        <li><a class="tech-link" href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html" target="_blank">SSM Parameter Store</a> — bezpečné úložiště hesel a API klíčů</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 7: SDÍLENÁ INFRASTRUKTURA ═══════════ -->
+<div class="slide" data-slide="7">
+  <h3>Infrastruktura</h3>
+  <h2>Sdílené resources — úspora nákladů</h2>
+  <p class="subtitle">4 microservices sdílí infrastrukturu, ale zůstávají nezávisle nasaditelné.</p>
+  <div class="grid-4">
+    <div class="metric">
+      <div class="metric-value" style="font-size:24px">1× <a class="tech-link" href="https://aws.amazon.com/rds/aurora/" target="_blank" style="font-size:inherit;font-weight:inherit">Aurora</a></div>
+      <div class="metric-label">PostgreSQL databáze</div>
+      <div style="font-size:11px; color:var(--sconto-muted); margin-top:6px">Jedna DB, tabulky<br>oddělené prefixem<br>(emails_*, pdf_*, …)</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value" style="font-size:24px">1× <a class="tech-link" href="https://aws.amazon.com/elasticloadbalancing/application-load-balancer/" target="_blank" style="font-size:inherit;font-weight:inherit">ALB</a></div>
+      <div class="metric-label">Rozdělovač provozu</div>
+      <div style="font-size:11px; color:var(--sconto-muted); margin-top:6px">Jeden vstup, routuje<br>dle URL cesty na<br>správný microservice</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value" style="font-size:24px">1× Redis</div>
+      <div class="metric-label">Sdílený cache</div>
+      <div style="font-size:11px; color:var(--sconto-muted); margin-top:6px">Rychlá paměť, sessions,<br>omezovač rychlosti,<br>pojistka při výpadcích</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value" style="font-size:24px">1× ECS</div>
+      <div class="metric-label">Fargate cluster</div>
+      <div style="font-size:11px; color:var(--sconto-muted); margin-top:6px">Platíme jen za běh<br>Nic neběží naprázdno<br>Škáluje se samo</div>
+    </div>
+  </div>
+  <div class="grid-2" style="margin-top:12px">
+    <div class="metric">
+      <div class="metric-value" style="font-size:24px"><a class="tech-link" href="https://aws.amazon.com/s3/" target="_blank" style="font-size:inherit;font-weight:inherit">S3</a> Storage</div>
+      <div class="metric-label">Úložiště souborů</div>
+      <div style="font-size:11px; color:var(--sconto-muted); margin-top:6px">Vygenerovaná PDF, přílohy emailů, loga — vše v S3 bucketech. Pay-per-use, neomezená kapacita.</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value" style="font-size:24px">SSM</div>
+      <div class="metric-label"><a class="tech-link" href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html" target="_blank">Trezor hesel</a></div>
+      <div style="font-size:11px; color:var(--sconto-muted); margin-top:6px">DB hesla, API klíče, konfigurace — bezpečně v AWS. Nikdy v kódu, nikdy v Gitu. Service si načte při startu.</div>
+    </div>
+  </div>
+  <div class="grid-2" style="margin-top:20px">
+    <div class="callout">
+      <strong>Co je ALB?</strong> <a class="tech-link" href="https://aws.amazon.com/elasticloadbalancing/" target="_blank">Application Load Balancer</a> = „rozdělovač provozu" od AWS. Přijde požadavek na <code>/api/emails/send</code> → ALB ho pošle na Email service. <code>/api/pdf/generate</code> → na PDF service. Jeden vstupní bod pro všechno.
+    </div>
+    <div class="callout">
+      <strong>Co je SSM Parameter Store?</strong> <a class="tech-link" href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html" target="_blank">AWS trezor</a> na hesla, API klíče a konfiguraci. Místo <code>.env</code> souborů v repozitáři — hesla bezpečně uložená v AWS, service si je načte při startu. Nikdy v kódu, nikdy v Gitu.
+    </div>
+  </div>
+  <div class="grid-2" style="margin-top:8px">
+    <div class="callout">
+      <strong>Úspora:</strong> 1 Aurora instance místo 4–5 = ~$150–400/měs. Sdílený ALB i Redis = $0 navíc. ECS Fargate = platíme jen za běžící tasky.
+    </div>
+    <div class="callout">
+      <strong>Izolace:</strong> Každý service = vlastní GitLab repo, vlastní ECR image, vlastní ECS task definition. Deploy jednoho nerozbije ostatní.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 8: AUTH — COGNITO ═══════════ -->
+<div class="slide" data-slide="8">
+  <div class="badge-row"><span class="tag tag-new">NOVÉ PRO TÝM</span></div>
+  <h3>Autentizace</h3>
+  <h2><a class="tech-link" href="https://aws.amazon.com/cognito/" target="_blank">AWS Cognito</a> — zero auth kód v PHP</h2>
+  <div class="diagram-container">
+    <svg viewBox="0 0 860 320" width="860">
+      <rect class="highlight-rect" x="340" y="10" width="180" height="50"/>
+      <text class="node-label" x="430" y="35" text-anchor="middle">AWS Cognito</text>
+      <text class="node-sublabel" x="430" y="50" text-anchor="middle">Login · přístupový token · role</text>
+      <rect class="node-rect" x="310" y="90" width="240" height="50" style="stroke:var(--sconto-green)"/>
+      <text class="node-label" x="430" y="112" text-anchor="middle" style="fill:var(--sconto-green)">Next.js Dashboard</text>
+      <text class="node-sublabel" x="430" y="128" text-anchor="middle">NextAuth.js + řízení přístupu dle rolí</text>
+      <line class="conn-animated" x1="430" y1="60" x2="430" y2="90"/>
+      <rect class="node-rect" x="270" y="170" width="320" height="40" style="stroke:var(--sconto-blue)"/>
+      <text class="node-label" x="430" y="194" text-anchor="middle" style="fill:var(--sconto-blue)">ALB (rozdělovač) — automaticky ověří přihlášení</text>
+      <line class="conn-animated" x1="430" y1="140" x2="430" y2="170"/>
+      <rect class="ok-rect" x="80" y="240" width="160" height="45"/>
+      <text class="node-label" x="160" y="260" text-anchor="middle" style="font-size:12px">Emaily</text>
+      <text class="node-sublabel" x="160" y="275" text-anchor="middle">ví kdo je přihlášen</text>
+      <rect class="ok-rect" x="260" y="240" width="140" height="45"/>
+      <text class="node-label" x="330" y="260" text-anchor="middle" style="font-size:12px">PDF</text>
+      <text class="node-sublabel" x="330" y="275" text-anchor="middle">ví kdo je přihlášen</text>
+      <rect class="ok-rect" x="420" y="240" width="160" height="45"/>
+      <text class="node-label" x="500" y="260" text-anchor="middle" style="font-size:12px">ČS Platby</text>
+      <text class="node-sublabel" x="500" y="275" text-anchor="middle">ví kdo je přihlášen</text>
+      <rect class="ok-rect" x="600" y="240" width="180" height="45"/>
+      <text class="node-label" x="690" y="260" text-anchor="middle" style="font-size:12px">Nadlimitní obj.</text>
+      <text class="node-sublabel" x="690" y="275" text-anchor="middle">ví kdo je přihlášen</text>
+      <line class="conn-blue" x1="340" y1="210" x2="160" y2="240"/>
+      <line class="conn-blue" x1="390" y1="210" x2="330" y2="240"/>
+      <line class="conn-blue" x1="470" y1="210" x2="500" y2="240"/>
+      <line class="conn-blue" x1="530" y1="210" x2="690" y2="240"/>
+      <text class="node-sublabel" x="430" y="312" text-anchor="middle" style="font-size:11px">
+        Cognito Groups: admin (vše) · finance (PDF + platby) · overlimits (nadlimitní) · emails (emaily)
+      </text>
+    </svg>
+  </div>
+  <div class="grid-2" style="margin-top:8px">
+    <div class="callout">
+      <strong>Jak to funguje:</strong> ALB (rozdělovač provozu) ověří přihlášení automaticky. PHP microservice dostane info o přihlášeném uživateli v hlavičkách požadavku. Žádný přihlašovací kód v Symfony — vše řeší AWS.
+    </div>
+    <div class="callout">
+      <strong>Cena:</strong> $0 — Cognito je zdarma do 50 000 uživatelů/měsíc, admin tým = 5–20 lidí. Komunikace mezi aplikacemi (E-shop → microservice) se řeší API klíči v AWS trezoru.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 9: SERVICE-TO-SERVICE AUTH ═══════════ -->
+<div class="slide" data-slide="9">
+  <h3>Autorizace aplikací</h3>
+  <h2>Jak se E-shop, POS a IM připojí k microservices?</h2>
+  <p class="subtitle">Každá aplikace se autorizuje vlastním API klíčem. Klíče bezpečně uložené v AWS — nikdy v kódu.</p>
+  <div class="diagram-container">
+    <svg viewBox="0 0 860 320" width="860">
+      <!-- Left: Calling apps -->
+      <rect class="highlight-rect" x="30" y="30" width="180" height="55"/>
+      <text class="node-label" x="120" y="52" text-anchor="middle">E-shop (Shopsys)</text>
+      <text class="node-sublabel" x="120" y="70" text-anchor="middle">EKS · vpc-016</text>
+
+      <rect class="highlight-rect" x="30" y="105" width="180" height="55"/>
+      <text class="node-label" x="120" y="127" text-anchor="middle">POS systém</text>
+      <text class="node-sublabel" x="120" y="145" text-anchor="middle">ECS · vpc-037</text>
+
+      <rect class="highlight-rect" x="30" y="180" width="180" height="55"/>
+      <text class="node-label" x="120" y="202" text-anchor="middle">IM (Integrační můstek)</text>
+      <text class="node-sublabel" x="120" y="220" text-anchor="middle">ECS · vpc-037</text>
+
+      <!-- Arrow labels -->
+      <line class="conn-animated" x1="210" y1="57" x2="340" y2="130"/>
+      <line class="conn-animated" x1="210" y1="132" x2="340" y2="140"/>
+      <line class="conn-animated" x1="210" y1="207" x2="340" y2="150"/>
+
+      <text class="conn-label-text" x="275" y="80" style="font-size:10px;fill:var(--sconto-yellow)">X-Api-Key: eshop_***</text>
+      <text class="conn-label-text" x="275" y="130" style="font-size:10px;fill:var(--sconto-yellow)">X-Api-Key: pos_***</text>
+      <text class="conn-label-text" x="275" y="195" style="font-size:10px;fill:var(--sconto-yellow)">X-Api-Key: im_***</text>
+
+      <!-- Middle: ALB -->
+      <rect class="node-rect" x="340" y="110" width="200" height="50" style="stroke:var(--sconto-blue)"/>
+      <text class="node-label" x="440" y="132" text-anchor="middle" style="fill:var(--sconto-blue)">ALB (rozdělovač)</text>
+      <text class="node-sublabel" x="440" y="148" text-anchor="middle">Ověří API klíč + routuje</text>
+
+      <!-- Right: Microservices -->
+      <line class="conn-blue" x1="540" y1="125" x2="620" y2="55"/>
+      <line class="conn-blue" x1="540" y1="135" x2="620" y2="135"/>
+      <line class="conn-blue" x1="540" y1="145" x2="620" y2="215"/>
+
+      <rect class="ok-rect" x="620" y="30" width="200" height="50"/>
+      <text class="node-label" x="720" y="52" text-anchor="middle" style="font-size:12px">Emaily</text>
+      <text class="node-sublabel" x="720" y="68" text-anchor="middle">/api/emails/*</text>
+
+      <rect class="ok-rect" x="620" y="110" width="200" height="50"/>
+      <text class="node-label" x="720" y="132" text-anchor="middle" style="font-size:12px">PDF Generátor</text>
+      <text class="node-sublabel" x="720" y="148" text-anchor="middle">/api/pdf/*</text>
+
+      <rect class="ok-rect" x="620" y="190" width="200" height="50"/>
+      <text class="node-label" x="720" y="212" text-anchor="middle" style="font-size:12px">ČS Platby</text>
+      <text class="node-sublabel" x="720" y="228" text-anchor="middle">/api/payments/*</text>
+
+      <!-- SSM -->
+      <rect class="node-rect" x="340" y="260" width="200" height="45" style="stroke:var(--sconto-yellow)"/>
+      <text class="node-label" x="440" y="280" text-anchor="middle" style="font-size:12px;fill:var(--sconto-yellow)">AWS SSM (trezor hesel)</text>
+      <text class="node-sublabel" x="440" y="295" text-anchor="middle">API klíče, DB hesla, konfigurace</text>
+      <line style="stroke:var(--sconto-yellow);stroke-width:1;stroke-dasharray:4 4" x1="440" y1="260" x2="440" y2="160"/>
+    </svg>
+  </div>
+  <div class="grid-3" style="margin-top:8px">
+    <div class="callout">
+      <strong>Jak to funguje:</strong> Každá aplikace má svůj unikátní API klíč. Posílá ho v hlavičce <code>X-Api-Key</code> při každém požadavku. Service ověří klíč a ví, kdo volá.
+    </div>
+    <div class="callout">
+      <strong>Kde jsou klíče:</strong> V <a class="tech-link" href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html" target="_blank">AWS SSM Parameter Store</a> — bezpečný trezor. Nikdy v kódu, nikdy v .env, nikdy v Gitu. Service si je načte při startu.
+    </div>
+    <div class="callout">
+      <strong>Oprávnění:</strong> Každý klíč má vlastní oprávnění — E-shop může volat emaily a PDF, POS jen platby. Oddělená hesla = pokud unikne jedno, ostatní jsou v bezpečí.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 10: API PLATFORM ═══════════ -->
+<div class="slide" data-slide="10">
+  <h3>API strategie</h3>
+  <h2><a class="tech-link" href="https://api-platform.com/" target="_blank">API Platform</a> — radikálně méně kódu</h2>
+  <div class="grid-2" style="margin-top:24px">
+    <div>
+      <h3 style="color:var(--sconto-green)">API Platform (5 řádků)</h3>
+      <div class="card" style="margin-top:12px; font-family:monospace; font-size:13px; line-height:1.8; background:rgba(34,197,94,0.05); border-color:rgba(34,197,94,0.3)">
+        <span style="color:var(--sconto-muted)">#[ApiResource]</span><br>
+        <span style="color:var(--sconto-muted)">#[ORM\Entity]</span><br>
+        <span style="color:#fff">class</span> <span style="color:var(--sconto-yellow)">Invoice</span> {<br>
+        &nbsp;&nbsp;<span style="color:#fff">public</span> ?int $id;<br>
+        &nbsp;&nbsp;<span style="color:#fff">public</span> string $number;<br>
+        &nbsp;&nbsp;<span style="color:#fff">public</span> float $amount;<br>
+        }
+      </div>
+      <p style="margin-top:12px; font-size:13px; color:var(--sconto-green)">
+        = GET, POST, PUT, PATCH, DELETE + OpenAPI docs + validace + stránkování + filtrování
+      </p>
+    </div>
+    <div>
+      <h3 style="color:var(--sconto-red)">Boilerplate způsob (~100 řádků)</h3>
+      <div class="card" style="margin-top:12px; font-family:monospace; font-size:13px; line-height:1.8; background:rgba(239,68,68,0.05); border-color:rgba(239,68,68,0.3)">
+        Controller + vstupní objekt<br>+ výstupní objekt + Route + config<br>+ databázová vrstva + service<br>= <strong style="color:var(--sconto-red)">4–5 souborů, 100+ řádků</strong>
+      </div>
+      <div class="callout" style="margin-top:20px">
+        <strong>Strategie:</strong><br>
+        CategoryOverlimits → nechat sconto/rest-bundle (Lukáš)<br>
+        Nové microservices 1–4 → <strong>API Platform</strong><br>
+        Sdílený admin UI → API Platform Admin (auto-generovaný React panel)
+      </div>
+    </div>
+  </div>
+  <div class="callout" style="margin-top:16px">
+    <strong>Bonus:</strong> Z API dokumentace automaticky generujeme klienty pro volání mezi službami. Frontend tým dostane TypeScript typy automaticky přes nástroj Orval.
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 11: API PLATFORM — JAK TO FUNGUJE ═══════════ -->
+<div class="slide" data-slide="11">
+  <div class="badge-row"><span class="tag tag-new">NOVÉ PRO TÝM</span></div>
+  <h3>API Platform — Detail</h3>
+  <h2>Co přesně se stane, když napíšete entitu?</h2>
+  <div class="grid-2" style="margin-top:20px">
+    <div>
+      <h3 style="color:var(--sconto-green)">PHP dev napíše TOTO:</h3>
+      <div class="card" style="margin-top:12px; font-family:monospace; font-size:12px; line-height:2; background:rgba(34,197,94,0.05); border-color:rgba(34,197,94,0.3)">
+        <span style="color:var(--sconto-muted)">// src/Entity/EmailNotification.php</span><br>
+        <span style="color:#a78bfa">#[ApiResource]</span><br>
+        <span style="color:#a78bfa">#[ORM\Entity]</span><br>
+        <span style="color:#fff">class</span> <span style="color:var(--sconto-yellow)">EmailNotification</span> {<br>
+        &nbsp;&nbsp;<span style="color:#a78bfa">#[ORM\Id, ORM\GeneratedValue]</span><br>
+        &nbsp;&nbsp;<span style="color:#fff">public</span> ?int <span style="color:var(--sconto-green)">$id</span> = null;<br><br>
+        &nbsp;&nbsp;<span style="color:#a78bfa">#[ORM\Column]</span><br>
+        &nbsp;&nbsp;<span style="color:#fff">public</span> string <span style="color:var(--sconto-green)">$to</span>;<br><br>
+        &nbsp;&nbsp;<span style="color:#a78bfa">#[ORM\Column]</span><br>
+        &nbsp;&nbsp;<span style="color:#fff">public</span> string <span style="color:var(--sconto-green)">$subject</span>;<br><br>
+        &nbsp;&nbsp;<span style="color:#a78bfa">#[ORM\Column(type: 'text')]</span><br>
+        &nbsp;&nbsp;<span style="color:#fff">public</span> string <span style="color:var(--sconto-green)">$body</span>;<br><br>
+        &nbsp;&nbsp;<span style="color:#a78bfa">#[ORM\Column]</span><br>
+        &nbsp;&nbsp;<span style="color:#fff">public</span> string <span style="color:var(--sconto-green)">$status</span> = 'pending';<br>
+        }
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--sconto-yellow)">API Platform AUTOMATICKY vytvoří:</h3>
+      <table class="s-table" style="margin-top:12px">
+        <tr><th>Endpoint</th><th>Co dělá</th></tr>
+        <tr><td><code style="color:var(--sconto-green)">GET</code> /api/emails</td><td>Seznam všech emailů (stránkovaný)</td></tr>
+        <tr><td><code style="color:var(--sconto-green)">GET</code> /api/emails/{id}</td><td>Detail jednoho emailu</td></tr>
+        <tr><td><code style="color:var(--sconto-blue)">POST</code> /api/emails</td><td>Vytvořit nový email</td></tr>
+        <tr><td><code style="color:var(--sconto-orange)">PUT</code> /api/emails/{id}</td><td>Upravit email</td></tr>
+        <tr><td><code style="color:var(--sconto-red)">DELETE</code> /api/emails/{id}</td><td>Smazat email</td></tr>
+      </table>
+      <h3 style="margin-top:16px">A navíc zdarma:</h3>
+      <ul class="check-list" style="margin-top:8px">
+        <li>Interaktivní <a class="tech-link" href="https://scalar.com/" target="_blank">Scalar dokumentace</a> (testovatelná v prohlížeči, modernější než Swagger)</li>
+        <li>Validace vstupních dat (automaticky z typů)</li>
+        <li>Stránkování (30 položek/stránka)</li>
+        <li>Filtrování a řazení (dle sloupců)</li>
+        <li>JSON formát odpovědí (standardní, konfigurovatelný)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 12: API PLATFORM — WORKFLOW ═══════════ -->
+<div class="slide" data-slide="12">
+  <h3>API Platform — Workflow</h3>
+  <h2>Od entity k hotovému API za minuty, ne dny</h2>
+  <div class="grid-2" style="margin-top:20px">
+    <div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot">1</div>
+          <div class="timeline-content">
+            <div class="timeline-title">PHP dev napíše entitu</div>
+            <div class="timeline-desc">Třída s vlastnostmi (<code>$to</code>, <code>$subject</code>, <code>$body</code>). Přidá <code>#[ApiResource]</code> atribut. <strong>5 minut práce.</strong></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">2</div>
+          <div class="timeline-content">
+            <div class="timeline-title">Doctrine vytvoří DB tabulku</div>
+            <div class="timeline-desc"><code>php bin/console doctrine:migrations:migrate</code> — automatická migrace. <strong>1 příkaz.</strong></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">3</div>
+          <div class="timeline-content">
+            <div class="timeline-title">API Platform vygeneruje REST API</div>
+            <div class="timeline-desc">CRUD endpointy + Scalar docs + validace. <strong>0 řádků kódu navíc.</strong></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">4</div>
+          <div class="timeline-content">
+            <div class="timeline-title">Orval vygeneruje TypeScript klienta</div>
+            <div class="timeline-desc">Z OpenAPI spec auto-generuje React Query hooky pro frontend. <strong>1 příkaz.</strong></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--sconto-green)">5</div>
+          <div class="timeline-content">
+            <div class="timeline-title" style="color:var(--sconto-green)">Hotovo — API + Admin UI + FE typy</div>
+            <div class="timeline-desc">PHP dev nemusel psát controller, router, serializer, dokumentaci. Vše automaticky.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="callout">
+        <strong>Porovnání časů:</strong><br><br>
+        <strong style="color:var(--sconto-red)">Bez API Platform:</strong> nový endpoint = Controller + DTO + Route + Serializer + dokumentace = <strong>2–4 hodiny</strong><br><br>
+        <strong style="color:var(--sconto-green)">S API Platform:</strong> nový endpoint = přidat property do entity = <strong>5 minut</strong>
+      </div>
+      <div class="callout" style="margin-top:12px">
+        <strong>Kdy potřebujeme vlastní logiku?</strong><br>
+        API Platform podporuje <a class="tech-link" href="https://api-platform.com/docs/core/state-processors/" target="_blank">State Processors</a> — vlastní kód, který se spustí po POST/PUT. Např. po vytvoření emailu → odeslat přes Mailersend. Entita = data, Processor = logika.
+      </div>
+      <div class="callout" style="margin-top:12px">
+        <strong>Dokumentace (linky):</strong><br>
+        <a class="tech-link" href="https://api-platform.com/docs/distribution/" target="_blank">Getting Started</a> ·
+        <a class="tech-link" href="https://api-platform.com/docs/core/filters/" target="_blank">Filtry</a> ·
+        <a class="tech-link" href="https://api-platform.com/docs/core/serialization/" target="_blank">Serializace</a> ·
+        <a class="tech-link" href="https://api-platform.com/docs/admin/" target="_blank">Admin Panel</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 13: FRONTEND STRATEGIE ═══════════ -->
+<div class="slide" data-slide="13">
+  <h3>Frontend</h3>
+  <h2>AI-assisted pipeline — PHP dev si „vygeneruje" frontend</h2>
+  <div class="diagram-container">
+    <svg viewBox="0 0 880 220" width="880">
+      <rect class="node-rect" x="20" y="70" width="140" height="65"/>
+      <text class="node-label" x="90" y="92" text-anchor="middle" style="font-size:12px">Doctrine Entita</text>
+      <text class="node-sublabel" x="90" y="108" text-anchor="middle">PHP dev píše</text>
+      <text class="node-sublabel" x="90" y="122" text-anchor="middle" style="fill:var(--sconto-yellow)">to umí</text>
+      <line class="conn-animated" x1="160" y1="102" x2="190" y2="102"/>
+      <rect class="node-rect" x="190" y="70" width="140" height="65"/>
+      <text class="node-label" x="260" y="92" text-anchor="middle" style="font-size:12px">API Platform</text>
+      <text class="node-sublabel" x="260" y="108" text-anchor="middle">Auto REST API</text>
+      <text class="node-sublabel" x="260" y="122" text-anchor="middle">+ OpenAPI spec</text>
+      <line class="conn-animated" x1="330" y1="102" x2="360" y2="102"/>
+      <rect class="node-rect" x="360" y="70" width="140" height="65"/>
+      <text class="node-label" x="430" y="92" text-anchor="middle" style="font-size:12px">Orval</text>
+      <text class="node-sublabel" x="430" y="108" text-anchor="middle">Auto TypeScript</text>
+      <text class="node-sublabel" x="430" y="122" text-anchor="middle">+ hotové React funkce</text>
+      <line class="conn-animated" x1="500" y1="102" x2="530" y2="102"/>
+      <rect class="node-rect" x="530" y="70" width="140" height="65"/>
+      <text class="node-label" x="600" y="92" text-anchor="middle" style="font-size:12px">v0.dev / Claude</text>
+      <text class="node-sublabel" x="600" y="108" text-anchor="middle">AI generuje UI</text>
+      <text class="node-sublabel" x="600" y="122" text-anchor="middle">shadcn/ui komponenty</text>
+      <line class="conn-animated" x1="670" y1="102" x2="700" y2="102"/>
+      <rect class="node-rect" x="700" y="70" width="160" height="65" style="stroke:var(--sconto-green)"/>
+      <text class="node-label" x="780" y="92" text-anchor="middle" style="font-size:12px;fill:var(--sconto-green)">Next.js Dashboard</text>
+      <text class="node-sublabel" x="780" y="108" text-anchor="middle">Společný FE</text>
+      <text class="node-sublabel" x="780" y="122" text-anchor="middle">pro všechny services</text>
+      <text class="node-sublabel" x="90" y="160" text-anchor="middle">PHP dev</text>
+      <text class="node-sublabel" x="260" y="160" text-anchor="middle">Automaticky</text>
+      <text class="node-sublabel" x="430" y="160" text-anchor="middle">CLI / CI</text>
+      <text class="node-sublabel" x="600" y="160" text-anchor="middle">PHP dev + prompt</text>
+      <text class="node-sublabel" x="780" y="160" text-anchor="middle">Deploy na AWS</text>
+    </svg>
+  </div>
+  <div class="grid-2" style="margin-top:8px">
+    <div class="callout">
+      <strong>Klíčové:</strong> PHP dev nepotřebuje umět React od základu. AI mu generuje komponenty, on je skládá. <a class="tech-link" href="https://v0.dev/" target="_blank">v0.dev</a> NENÍ hosting — jen generuje kód. Výstup běží na AWS.
+    </div>
+    <div class="callout">
+      <strong><a class="tech-link" href="https://ui.shadcn.com/" target="_blank">shadcn/ui</a> = design systém</strong> — konzistentní look across services bez FE designéra. <a class="tech-link" href="https://orval.dev/" target="_blank">Orval</a> = bridge mezi backend (OpenAPI) a frontend (TypeScript).
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 11: MIGRACE — NOVÝ SYSTÉM ═══════════ -->
+<div class="slide" data-slide="11">
+  <h3>Migrace</h3>
+  <h2>Nový systém — aplikace se připojují postupně</h2>
+  <p class="subtitle">Neextrahujeme z monolitu. Stavíme vše od nuly jako nový, nezávislý systém. Aplikace (E-shop, POS, IM) se připojují, kdy chtějí.</p>
+  <div class="grid-4" style="margin-top:24px">
+    <div class="phase-card">
+      <div class="phase-num">FÁZE 1</div>
+      <h2 style="font-size:16px; margin-bottom:8px">Infrastruktura + UI</h2>
+      <p style="font-size:13px; color:var(--sconto-muted)">ECS cluster, ALB, Cognito, SSM secrets. <strong style="color:#fff">Next.js Dashboard</strong> — společné admin UI jako vstupní bod.</p>
+    </div>
+    <div class="phase-card">
+      <div class="phase-num">FÁZE 2</div>
+      <h2 style="font-size:16px; margin-bottom:8px">Microservices naživo</h2>
+      <p style="font-size:13px; color:var(--sconto-muted)">Nová logika, nový kód. Emaily, PDF, platby — vše postavené od základu na Symfony 7.2 + API Platform.</p>
+    </div>
+    <div class="phase-card">
+      <div class="phase-num">FÁZE 3</div>
+      <h2 style="font-size:16px; margin-bottom:8px">Appky se připojují</h2>
+      <p style="font-size:13px; color:var(--sconto-muted)">E-shop, POS, IM — každá aplikace se připojí na API <strong style="color:#fff">nezávisle, ve vlastním tempu</strong>. Žádné čekání.</p>
+    </div>
+    <div class="phase-card">
+      <div class="phase-num">FÁZE 4</div>
+      <h2 style="font-size:16px; margin-bottom:8px">Stará logika pryč</h2>
+      <p style="font-size:13px; color:var(--sconto-muted)">Až se appka připojí → stará duplicitní logika se smaže. Jedna pravda, jedno místo.</p>
+    </div>
+  </div>
+  <div class="grid-2" style="margin-top:20px">
+    <div class="callout">
+      <strong>Klíčový princip:</strong> Neřešíme „jak to vytáhnout z monolitu". Stavíme nový systém vedle. Aplikace (E-shop, POS, IM) se připojují přes API postupně — žádná velká migrace, žádný velký třesk.
+    </div>
+    <div class="callout">
+      <strong>Výhoda:</strong> Každý tým (E-shop, POS) si řídí tempo připojení sám. Neblokují se navzájem. Microservice funguje i kdyby byl připojený jen E-shop a POS zatím ne.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 12: VPC PEERING BLOCKER ═══════════ -->
+<div class="slide" data-slide="12">
+  <div class="badge-row"><span class="tag tag-red">KRITICKÝ BLOKÁTOR</span></div>
+  <h2>VPC Peering — neexistuje!</h2>
+  <p class="subtitle">E-shop, POS i IM musí vidět na microservices. Aktuálně žádné privátní spojení mezi VPC neexistuje.</p>
+  <div class="diagram-container">
+    <svg viewBox="0 0 860 340" width="860">
+      <!-- Left: Calling apps in their VPCs -->
+      <rect class="vpc-rect" x="20" y="20" width="240" height="100"/>
+      <text class="vpc-label" x="35" y="38">vpc-016 · ECOM</text>
+      <rect class="highlight-rect" x="40" y="50" width="200" height="55"/>
+      <text class="node-label" x="140" y="72" text-anchor="middle" style="font-size:13px">E-shop (Shopsys)</text>
+      <text class="node-sublabel" x="140" y="90" text-anchor="middle">EKS · Symfony 6.4</text>
+
+      <rect class="vpc-rect" x="20" y="140" width="240" height="100"/>
+      <text class="vpc-label" x="35" y="158">vpc-037 · POS + IM</text>
+      <rect class="highlight-rect" x="40" y="168" width="95" height="55"/>
+      <text class="node-label" x="87" y="190" text-anchor="middle" style="font-size:12px">POS</text>
+      <text class="node-sublabel" x="87" y="208" text-anchor="middle">Obch. domy</text>
+      <rect class="highlight-rect" x="145" y="168" width="95" height="55"/>
+      <text class="node-label" x="192" y="190" text-anchor="middle" style="font-size:12px">IM</text>
+      <text class="node-sublabel" x="192" y="208" text-anchor="middle">Integr. můstek</text>
+
+      <rect class="vpc-rect" x="20" y="260" width="240" height="60"/>
+      <text class="vpc-label" x="35" y="278">vpc-0e4 · AZAP + PIM</text>
+      <text class="node-sublabel" x="140" y="300" text-anchor="middle">Akeneo, AZAP, Výdej</text>
+
+      <!-- Red X lines -->
+      <line style="stroke:var(--sconto-red);stroke-width:3;stroke-dasharray:8 4" x1="260" y1="77" x2="540" y2="120"/>
+      <line style="stroke:var(--sconto-red);stroke-width:3;stroke-dasharray:8 4" x1="260" y1="195" x2="540" y2="150"/>
+      <line style="stroke:var(--sconto-red);stroke-width:3;stroke-dasharray:8 4" x1="260" y1="290" x2="540" y2="175"/>
+
+      <!-- Big X in the middle -->
+      <rect class="warning-rect" x="370" y="110" width="140" height="70"/>
+      <text style="fill:var(--sconto-red);font-family:'Poppins';font-size:14px;font-weight:800" x="440" y="138" text-anchor="middle">VPC PEERING</text>
+      <text style="fill:var(--sconto-red);font-family:'Poppins';font-size:28px;font-weight:800" x="440" y="172" text-anchor="middle">✕</text>
+
+      <!-- Right: Microservices -->
+      <rect class="vpc-rect" x="540" y="30" width="290" height="280"/>
+      <text class="vpc-label" x="555" y="48">vpc-037 · MICRO (cíl)</text>
+      <rect class="ok-rect" x="560" y="60" width="250" height="50"/>
+      <text class="node-label" x="685" y="82" text-anchor="middle" style="font-size:13px">4 Microservices</text>
+      <text class="node-sublabel" x="685" y="100" text-anchor="middle">ECS Fargate · Symfony 7.2</text>
+
+      <rect class="ok-rect" x="560" y="125" width="250" height="35"/>
+      <text class="node-label" x="685" y="147" text-anchor="middle" style="font-size:11px;fill:var(--sconto-blue)">ALB (rozdělovač provozu)</text>
+
+      <rect class="ok-rect" x="560" y="175" width="120" height="35"/>
+      <text class="node-sublabel" x="620" y="197" text-anchor="middle">Aurora DB</text>
+      <rect class="ok-rect" x="690" y="175" width="120" height="35"/>
+      <text class="node-sublabel" x="750" y="197" text-anchor="middle">Redis</text>
+
+      <rect class="ok-rect" x="560" y="225" width="250" height="35"/>
+      <text class="node-label" x="685" y="247" text-anchor="middle" style="font-size:11px;fill:var(--sconto-green)">Next.js Dashboard (UI)</text>
+
+      <rect class="node-rect" x="560" y="270" width="250" height="30" style="stroke:var(--sconto-yellow)"/>
+      <text class="node-sublabel" x="685" y="290" text-anchor="middle" style="fill:var(--sconto-yellow)">SSM (trezor hesel) · S3 (soubory)</text>
+    </svg>
+  </div>
+  <div class="grid-2" style="margin-top:4px">
+    <div class="callout-red">
+      <strong>Problém:</strong> E-shop (vpc-016) nemá privátní cestu k microservices (vpc-037). POS a IM jsou ve stejné VPC, ale peering s E-shopem chybí. Toto MUSÍ vyřešit <strong>Alef</strong> (externí DevOps).
+    </div>
+    <div class="callout">
+      <strong>Řešení:</strong> <a class="tech-link" href="https://docs.aws.amazon.com/vpc/latest/peering/what-is-vpc-peering.html" target="_blank">VPC Peering</a> mezi vpc-016 ↔ vpc-037 (doporučené). <strong>Blokuje celou strategii — musí se vyřešit jako první!</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 13: POJISTKY ═══════════ -->
+<div class="slide" data-slide="13">
+  <h3>Bezpečnostní pojistky</h3>
+  <h2>Co se stane, když něco selže?</h2>
+  <p class="subtitle">Každý systém občas selže. Tyto pojistky zajistí, že selhání jedné části neshodí zbytek.</p>
+  <div class="grid-2" style="margin-top:20px">
+    <div>
+      <div class="card" style="margin-bottom:16px; border-top: 3px solid var(--sconto-green)">
+        <div class="card-title">Selže nasazení nové verze?</div>
+        <div class="card-desc" style="margin-top:8px">
+          AWS automaticky <strong style="color:var(--sconto-green)">vrátí předchozí fungující verzi</strong>. Nový deploy proběhne jen když nová verze projde kontrolou „žije a odpovídá". Žádný ruční zásah.
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px; border-top: 3px solid var(--sconto-blue)">
+        <div class="card-title">Selže odeslání emailu přes Mailersend?</div>
+        <div class="card-desc" style="margin-top:8px">
+          Email se <strong style="color:var(--sconto-blue)">automaticky zkusí odeslat znovu</strong> (3× s odstupem). Pokud i poté selže, uloží se do „fronty selhání" — neztratí se, opravíme a odešleme ručně.
+        </div>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--sconto-orange)">
+        <div class="card-title">Spadne databáze nebo Redis?</div>
+        <div class="card-desc" style="margin-top:8px">
+          Každý microservice má <strong style="color:var(--sconto-orange)">kontrolní endpoint /health</strong>. AWS ho kontroluje každých 30 sekund. Pokud neodpovídá → automaticky restartuje service.
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:16px; border-top: 3px solid var(--sconto-yellow)">
+        <div class="card-title">Externe služba (PDF.co, Erste) je nedostupná?</div>
+        <div class="card-desc" style="margin-top:8px">
+          Požadavky jdou <strong style="color:var(--sconto-yellow)">přes frontu na pozadí</strong> — uživatel nemusí čekat. Pokud služba neodpovídá, zkusíme to znovu automaticky. E-shop/POS mezitím fungují normálně.
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px; border-top: 3px solid var(--sconto-red)">
+        <div class="card-title">Příliš mnoho požadavků najednou?</div>
+        <div class="card-desc" style="margin-top:8px">
+          <strong style="color:var(--sconto-red)">Omezovač rychlosti</strong> zajistí, že nepřekročíme limity externích služeb (např. Mailersend 1000 emailů/min). Požadavky nad limit se zařadí do fronty.
+        </div>
+      </div>
+      <div class="callout">
+        <strong>Klíčový princip:</strong> Nikdy nevoláme externí služby „přímo" (synchronně). Vždy přes frontu na pozadí = uživatel dostane rychlou odpověď, zpracování běží na pozadí.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 14: MONITORING ═══════════ -->
+<div class="slide" data-slide="14">
+  <h3>Monitoring</h3>
+  <h2>Monitoring stack — již nakoupené nástroje</h2>
+  <div class="diagram-container">
+    <svg viewBox="0 0 860 280" width="860">
+      <rect class="highlight-rect" x="30" y="100" width="200" height="80"/>
+      <text class="node-label" x="130" y="130" text-anchor="middle">Microservice</text>
+      <text class="node-sublabel" x="130" y="148" text-anchor="middle">ECS Fargate</text>
+      <text class="node-sublabel" x="130" y="163" text-anchor="middle">PHP 8.3 · Symfony 7.2</text>
+      <rect class="node-rect" x="320" y="20" width="160" height="45"/>
+      <a href="https://sentry.io/" target="_blank"><text class="node-label" x="400" y="42" text-anchor="middle" style="font-size:13px;fill:var(--sconto-blue)">Sentry</text></a>
+      <text class="node-sublabel" x="400" y="56" text-anchor="middle">Chyby v kódu · performance</text>
+      <line class="conn-animated" x1="230" y1="115" x2="320" y2="42"/>
+      <rect class="node-rect" x="320" y="80" width="160" height="45"/>
+      <a href="https://www.speedcurve.com/" target="_blank"><text class="node-label" x="400" y="102" text-anchor="middle" style="font-size:13px;fill:var(--sconto-blue)">SpeedCurve</text></a>
+      <text class="node-sublabel" x="400" y="116" text-anchor="middle">Uptime · /health kontrola</text>
+      <line class="conn-animated" x1="230" y1="132" x2="320" y2="102"/>
+      <rect class="node-rect" x="320" y="140" width="160" height="45"/>
+      <a href="https://aws.amazon.com/cloudwatch/" target="_blank"><text class="node-label" x="400" y="162" text-anchor="middle" style="font-size:13px;fill:var(--sconto-blue)">CloudWatch</text></a>
+      <text class="node-sublabel" x="400" y="176" text-anchor="middle">CPU · paměť · fronty</text>
+      <line class="conn-animated" x1="230" y1="150" x2="320" y2="162"/>
+      <rect class="node-rect" x="580" y="60" width="220" height="130" style="stroke:var(--sconto-yellow)"/>
+      <text class="node-label" x="690" y="90" text-anchor="middle" style="fill:var(--sconto-yellow)">Microsoft Teams</text>
+      <text class="node-sublabel" x="690" y="110" text-anchor="middle">Kanál: ops-alerts — výpadky</text>
+      <text class="node-sublabel" x="690" y="125" text-anchor="middle">Kanál: dev-errors — Sentry chyby</text>
+      <text class="node-sublabel" x="690" y="140" text-anchor="middle">Kanál: deployments — nasazení</text>
+      <text class="node-sublabel" x="690" y="160" text-anchor="middle" style="fill:var(--sconto-green)">→ celý tým již Teams používá</text>
+      <text class="node-sublabel" x="690" y="180" text-anchor="middle">Webhook integrace se všemi nástroji</text>
+      <line class="conn-animated" x1="480" y1="42" x2="580" y2="95"/>
+      <line class="conn-animated" x1="480" y1="102" x2="580" y2="115"/>
+      <line class="conn-animated" x1="480" y1="162" x2="580" y2="135"/>
+    </svg>
+  </div>
+  <div class="grid-3" style="margin-top:8px">
+    <div class="callout">
+      <strong><a class="tech-link" href="https://sentry.io/" target="_blank">Sentry</a>:</strong> Zachytí každou chybu v PHP kódu. Ukáže přesný řádek, stack trace, kdo byl přihlášený. Notifikace do Teams.
+    </div>
+    <div class="callout">
+      <strong><a class="tech-link" href="https://www.speedcurve.com/" target="_blank">SpeedCurve</a>:</strong> Monitoruje dostupnost (uptime). Kontroluje /health endpoint každých 30s. Pokud neodpovídá → Teams alert.
+    </div>
+    <div class="callout">
+      <strong><a class="tech-link" href="https://aws.amazon.com/cloudwatch/" target="_blank">CloudWatch</a>:</strong> AWS metriky — využití CPU, paměti, počet zpráv ve frontě. Alarmy při překročení limitů.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 16: TESTING ═══════════ -->
+<div class="slide" data-slide="16">
+  <h3>Kvalita</h3>
+  <h2>Testing strategie & CI/CD pipeline</h2>
+  <div class="grid-2" style="margin-top:16px">
+    <div>
+      <h3>Co testujeme a proč</h3>
+      <table class="s-table" style="margin-top:8px">
+        <tr><th>Typ testu</th><th>Co dělá</th><th>Příklad</th></tr>
+        <tr>
+          <td><strong style="color:var(--sconto-green)">Unit testy</strong></td>
+          <td>Testuje jednotlivé funkce/třídy izolovaně</td>
+          <td>SPAYD kód se správně generuje, idempotence funguje</td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--sconto-blue)">Integrační testy</strong></td>
+          <td>Testuje spolupráci s databází</td>
+          <td>Email se uloží do DB a přečte zpět správně</td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--sconto-yellow)">API testy</strong></td>
+          <td>Testuje HTTP endpointy jako celek (od požadavku po odpověď)</td>
+          <td>POST /api/emails vrátí 201, GET vrátí seznam</td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--sconto-orange)">Contract testy</strong></td>
+          <td>Ověří, že API odpovídá dokumentaci</td>
+          <td>OpenAPI spec sedí s reálnými odpověďmi</td>
+        </tr>
+      </table>
+      <div class="callout" style="margin-top:12px">
+        <strong>Pravidlo:</strong> Žádný kód neprojde do produkce bez testů. Každý <a class="tech-link" href="https://docs.gitlab.com/ci/" target="_blank">GitLab CI</a> pipeline MUSÍ projít — jinak se deploy nespustí.
+      </div>
+    </div>
+    <div>
+      <h3>Nástroje pro testování</h3>
+      <table class="s-table" style="margin-top:8px">
+        <tr><th>Nástroj</th><th>K čemu</th></tr>
+        <tr><td><a class="tech-link" href="https://phpunit.de/" target="_blank"><strong>PHPUnit 12</strong></a></td><td>Všechny typy testů (unit, integrační, API)</td></tr>
+        <tr><td><a class="tech-link" href="https://github.com/dmaicher/doctrine-test-bundle" target="_blank"><strong>DAMA DoctrineTestBundle</strong></a></td><td>Každý test běží v transakci → DB se po testu vrátí do původního stavu</td></tr>
+        <tr><td><a class="tech-link" href="https://phpstan.org/" target="_blank"><strong>PHPStan</strong></a></td><td>Statická analýza — najde chyby bez spuštění kódu</td></tr>
+        <tr><td><strong>Easy Coding Standard</strong></td><td>Automaticky opravuje formátování kódu</td></tr>
+      </table>
+      <h3 style="margin-top:16px">GitLab CI Pipeline</h3>
+      <p style="font-size:13px; color:var(--sconto-muted); margin-top:4px">Každý push do repozitáře spustí automaticky:</p>
+      <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
+        <span class="tag tag-green" style="font-size:11px">1. Testy (PHPUnit)</span>
+        <span style="color:var(--sconto-muted)">→</span>
+        <span class="tag tag-blue" style="font-size:11px">2. Analýza (PHPStan)</span>
+        <span style="color:var(--sconto-muted)">→</span>
+        <span class="tag tag-orange" style="font-size:11px">3. Security scan</span>
+        <span style="color:var(--sconto-muted)">→</span>
+        <span class="tag tag-yellow" style="font-size:11px">4. Docker build</span>
+        <span style="color:var(--sconto-muted)">→</span>
+        <span class="tag tag-green" style="font-size:11px">5. Deploy na ECS</span>
+      </div>
+      <div class="callout-red" style="margin-top:12px">
+        <strong>Selže jakýkoli krok?</strong> Pipeline se zastaví, deploy neproběhne, tým dostane notifikaci do Teams. Žádný špatný kód se nedostane na server.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 17: ROADMAPA ═══════════ -->
+<div class="slide" data-slide="17">
+  <h3>Roadmapa</h3>
+  <h2>Implementační plán</h2>
+  <div class="grid-2" style="margin-top:16px">
+    <div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--sconto-red)">!</div>
+          <div class="timeline-content">
+            <div class="timeline-title" style="color:var(--sconto-red)">BLOKÁTOR: VPC Peering</div>
+            <div class="timeline-desc">Propojení vpc-016 ↔ vpc-037. Alef (externí DevOps). Bez toho E-shop nevidí na microservices.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">1</div>
+          <div class="timeline-content">
+            <div class="timeline-title">Infrastruktura & Auth</div>
+            <div class="timeline-desc">ECS cluster, ALB, Cognito, SSM trezor hesel, S3 storage. Rozběhnout CategoryOverlimits boilerplate na ECS.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--sconto-green)">2</div>
+          <div class="timeline-content">
+            <div class="timeline-title" style="color:var(--sconto-green)">Next.js Dashboard (UI)</div>
+            <div class="timeline-desc">Společné admin UI PŘED prvním microservice. AI-assisted pipeline (Orval + v0.dev + shadcn/ui). Bez UI nemá smysl pouštět služby.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">3</div>
+          <div class="timeline-content">
+            <div class="timeline-title">Notifikační emaily (MS #1)</div>
+            <div class="timeline-desc">Naklonovat boilerplate → API Platform → Mailersend integrace → deploy na ECS. Nejnižší riziko.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot">4</div>
+          <div class="timeline-content">
+            <div class="timeline-title">PDF Generátor (MS #2)</div>
+            <div class="timeline-desc">Šablony + data → PDF.co API → hotové PDF.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">5</div>
+          <div class="timeline-content">
+            <div class="timeline-title">ČS Platby (MS #3)</div>
+            <div class="timeline-desc">Erste Open Banking API. Idempotence, webhooky, SPAYD QR kódy.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">6</div>
+          <div class="timeline-content">
+            <div class="timeline-title">Appky se připojují</div>
+            <div class="timeline-desc">E-shop, POS, IM — každá aplikace se napojí přes API klíč, ve vlastním tempu, nezávisle na ostatních.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--sconto-muted)">∞</div>
+          <div class="timeline-content">
+            <div class="timeline-title">Budoucnost</div>
+            <div class="timeline-desc">Přihlášení zákazníků (self-checkout), přechod na AWS fronty zpráv (až když bude potřeba), další služby dle potřeby.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 18: TO-DO ═══════════ -->
+<div class="slide" data-slide="18">
+  <h3>Co nás čeká</h3>
+  <h2>To-Do před startem</h2>
+  <div class="grid-2" style="margin-top:16px">
+    <!-- AWS DODAVATEL -->
+    <div style="border:2px solid var(--sconto-red); border-radius:16px; padding:24px; background:rgba(239,68,68,0.05)">
+      <h3 style="color:var(--sconto-red); margin-bottom:12px">AWS dodavatel (Alef)</h3>
+      <div style="display:flex; flex-direction:column; gap:10px; font-size:14px">
+        <div style="display:flex; align-items:flex-start; gap:8px">
+          <span style="color:var(--sconto-red); font-weight:700; min-width:20px">⬜</span>
+          <div><strong style="color:var(--sconto-red)">VPC Peering vpc-016 ↔ vpc-037</strong><br><span style="color:var(--sconto-muted); font-size:12px">BLOKÁTOR — bez toho E-shop nevidí na microservices</span></div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:8px">
+          <span style="color:var(--sconto-muted); min-width:20px">⬜</span>
+          <div><strong>ECS cluster + ALB</strong><br><span style="color:var(--sconto-muted); font-size:12px">Cluster micro-dev, ALB s path-based routing, target groups</span></div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:8px">
+          <span style="color:var(--sconto-muted); min-width:20px">⬜</span>
+          <div><strong>Cognito</strong><br><span style="color:var(--sconto-muted); font-size:12px">User pool, app client, ALB authenticate-cognito pravidlo</span></div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:8px">
+          <span style="color:var(--sconto-muted); min-width:20px">⬜</span>
+          <div><strong>Aurora PostgreSQL</strong><br><span style="color:var(--sconto-muted); font-size:12px">Instance ve vpc-037, security groups pro přístup z ECS</span></div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:8px">
+          <span style="color:var(--sconto-muted); min-width:20px">⬜</span>
+          <div><strong>Redis + S3 + SSM</strong><br><span style="color:var(--sconto-muted); font-size:12px">Redis cluster, S3 buckety, SSM Parameter Store pro secrets</span></div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:8px">
+          <span style="color:var(--sconto-muted); min-width:20px">⬜</span>
+          <div><strong>Security groups & síťová pravidla</strong><br><span style="color:var(--sconto-muted); font-size:12px">Pravidla pro komunikaci mezi ECS tasks, ALB, DB, Redis</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEV TEAM -->
+    <div style="border:2px solid var(--sconto-green); border-radius:16px; padding:24px; background:rgba(34,197,94,0.05)">
+      <h3 style="color:var(--sconto-green); margin-bottom:12px">DEV team (boilerplate)</h3>
+      <div style="display:flex; flex-direction:column; gap:10px; font-size:14px">
+        <div style="display:flex; align-items:flex-start; gap:8px">
+          <span style="color:var(--sconto-green); min-width:20px">⬜</span>
+          <div><strong>Dokončit CategoryOverlimits boilerplate</strong><br><span style="color:var(--sconto-muted); font-size:12px">Entity, API Platform endpointy, business logika, testy</span></div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:8px">
+          <span style="color:var(--sconto-muted); min-width:20px">⬜</span>
+          <div><strong>GitLab CI/CD pipeline</strong><br><span style="color:var(--sconto-muted); font-size:12px">Testy → PHPStan → Security scan → Docker build → Deploy na ECS</span></div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:8px">
+          <span style="color:var(--sconto-muted); min-width:20px">⬜</span>
+          <div><strong>Testovací stack</strong><br><span style="color:var(--sconto-muted); font-size:12px">PHPUnit 12, DAMA DoctrineTestBundle, PHPStan na max level</span></div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:8px">
+          <span style="color:var(--sconto-muted); min-width:20px">⬜</span>
+          <div><strong>Docker konfigurace</strong><br><span style="color:var(--sconto-muted); font-size:12px">Dockerfile (PHP 8.3 + FPM), docker-compose pro lokální vývoj</span></div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:8px">
+          <span style="color:var(--sconto-muted); min-width:20px">⬜</span>
+          <div><strong>Scalar API dokumentace</strong><br><span style="color:var(--sconto-muted); font-size:12px">Interaktivní API docs generované automaticky z API Platform</span></div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:8px">
+          <span style="color:var(--sconto-muted); min-width:20px">⬜</span>
+          <div><strong>Šablona pro klonování dalších MS</strong><br><span style="color:var(--sconto-muted); font-size:12px">Boilerplate = vzor. Každý nový microservice = kopie + úprava entit.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- NAVIGATION -->
+<div class="nav-controls">
+  <button class="nav-btn" onclick="prevSlide()" title="Předchozí">‹</button>
+  <button class="nav-btn" onclick="nextSlide()" title="Další">›</button>
+</div>
+<div class="keyboard-hint"><kbd>←</kbd> <kbd>→</kbd> nebo klikni pro navigaci</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+let current = 0;
+
+document.getElementById('totalSlides').textContent = total;
+
+function showSlide(n) {
+  slides[current].classList.remove('active');
+  current = ((n % total) + total) % total;
+  slides[current].classList.add('active');
+  document.getElementById('currentSlide').textContent = current + 1;
+  document.getElementById('progressBar').style.width = ((current + 1) / total * 100) + '%';
+}
+
+function nextSlide() { showSlide(current + 1); }
+function prevSlide() { showSlide(current - 1); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+  if (e.key === 'Home') { e.preventDefault(); showSlide(0); }
+  if (e.key === 'End') { e.preventDefault(); showSlide(total - 1); }
+});
+
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; });
+document.addEventListener('touchend', e => {
+  const diff = touchStartX - e.changedTouches[0].screenX;
+  if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
+});
+</script>
+
+</body>
+</html>
