@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sconto — Aurora → Azure PG Replikace: Kterou cestou?</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sconto-yellow: #F6D84C;
+    --sconto-navy: #202330;
+    --sconto-blue: #0065FF;
+    --sconto-dark: #0f0f1a;
+    --sconto-surface: #161625;
+    --sconto-border: #2a2a3d;
+    --sconto-text: #e0e0e8;
+    --sconto-muted: #8888a0;
+    --sconto-green: #22c55e;
+    --sconto-red: #ef4444;
+    --sconto-orange: #f59e0b;
+    --glow-yellow: 0 0 30px rgba(246,216,76,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: var(--sconto-dark);
+    color: var(--sconto-text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .slide-deck { position: relative; width: 100vw; height: 100vh; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    padding: 100px 80px 40px;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    transform: translateX(40px);
+    overflow-y: auto;
+  }
+  .slide.active {
+    opacity: 1; visibility: visible; transform: translateX(0);
+  }
+
+  .logo-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 30px;
+    background: linear-gradient(180deg, rgba(15,15,26,0.95) 0%, rgba(15,15,26,0.7) 100%);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--sconto-border);
+  }
+  .logo-bar svg { height: 48px; width: auto; }
+  .slide-counter {
+    font-size: 13px; color: var(--sconto-muted);
+    font-weight: 500; letter-spacing: 1px;
+  }
+
+  .progress-bar {
+    position: fixed; top: 58px; left: 0; height: 3px; z-index: 100;
+    background: linear-gradient(90deg, var(--sconto-yellow), var(--sconto-blue));
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px rgba(246,216,76,0.5);
+  }
+
+  .nav-controls {
+    position: fixed; bottom: 24px; right: 30px; z-index: 100;
+    display: flex; gap: 8px;
+  }
+  .nav-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid var(--sconto-border);
+    background: var(--sconto-surface);
+    color: var(--sconto-text);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; transition: all 0.2s;
+  }
+  .nav-btn:hover { border-color: var(--sconto-yellow); color: var(--sconto-yellow); }
+
+  h1 {
+    font-size: clamp(32px, 4vw, 52px); font-weight: 700;
+    line-height: 1.15; margin-bottom: 16px;
+    background: linear-gradient(135deg, #fff 0%, var(--sconto-yellow) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  h2 {
+    font-size: clamp(22px, 2.5vw, 32px); font-weight: 600;
+    color: #fff; margin-bottom: 12px;
+  }
+  h3 {
+    font-size: 18px; font-weight: 600; color: var(--sconto-yellow);
+    margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .subtitle {
+    font-size: clamp(16px, 1.8vw, 22px); color: var(--sconto-muted);
+    font-weight: 300; margin-bottom: 32px; max-width: 700px;
+  }
+  p { line-height: 1.7; margin-bottom: 12px; font-size: 15px; }
+  .tag {
+    display: inline-block; padding: 4px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .tag-yellow { background: rgba(246,216,76,0.15); color: var(--sconto-yellow); border: 1px solid rgba(246,216,76,0.3); }
+  .tag-blue { background: rgba(0,101,255,0.15); color: #5b9fff; border: 1px solid rgba(0,101,255,0.3); }
+  .tag-green { background: rgba(34,197,94,0.15); color: var(--sconto-green); border: 1px solid rgba(34,197,94,0.3); }
+  .tag-red { background: rgba(239,68,68,0.15); color: var(--sconto-red); border: 1px solid rgba(239,68,68,0.3); }
+  .tag-orange { background: rgba(245,158,11,0.15); color: var(--sconto-orange); border: 1px solid rgba(245,158,11,0.3); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px; }
+
+  .card {
+    background: var(--sconto-surface); border: 1px solid var(--sconto-border);
+    border-radius: 12px; padding: 24px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .card:hover { border-color: rgba(246,216,76,0.4); box-shadow: var(--glow-yellow); }
+  .card-number {
+    font-size: 36px; font-weight: 800; color: var(--sconto-yellow);
+    line-height: 1; margin-bottom: 8px;
+  }
+  .card-title { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+  .card-desc { font-size: 13px; color: var(--sconto-muted); line-height: 1.5; }
+
+  .metric {
+    text-align: center; padding: 20px;
+    background: var(--sconto-surface); border-radius: 12px;
+    border: 1px solid var(--sconto-border);
+  }
+  .metric-value {
+    font-size: 32px; font-weight: 700; color: var(--sconto-yellow);
+    line-height: 1.1;
+  }
+  .metric-label { font-size: 12px; color: var(--sconto-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+  .s-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }
+  .s-table th {
+    text-align: left; padding: 10px 14px; font-weight: 600; font-size: 12px;
+    color: var(--sconto-yellow); text-transform: uppercase; letter-spacing: 1px;
+    border-bottom: 2px solid var(--sconto-border);
+  }
+  .s-table td {
+    padding: 10px 14px; border-bottom: 1px solid rgba(42,42,61,0.5);
+    color: var(--sconto-text);
+  }
+  .s-table tr:hover td { background: rgba(246,216,76,0.03); }
+  .s-table .highlight-row td { background: rgba(34,197,94,0.06); border-left: 3px solid var(--sconto-green); }
+
+  .bullet-list { list-style: none; padding: 0; }
+  .bullet-list li {
+    padding: 6px 0; padding-left: 20px; position: relative;
+    font-size: 14px; line-height: 1.6;
+  }
+  .bullet-list li::before {
+    content: '\2192'; position: absolute; left: 0; top: 6px;
+    color: var(--sconto-yellow); font-weight: 600;
+  }
+
+  .check-list { list-style: none; padding: 0; }
+  .check-list li {
+    padding: 8px 0; padding-left: 28px; position: relative;
+    font-size: 15px; line-height: 1.6;
+  }
+  .check-list li::before {
+    content: '\2713'; position: absolute; left: 0; top: 8px;
+    color: var(--sconto-green); font-weight: 700;
+  }
+
+  .hero-center {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+  }
+  .hero-center h1 { font-size: clamp(36px, 5vw, 64px); }
+  .hero-center .subtitle { max-width: 600px; }
+
+  .split-content { display: flex; gap: 40px; flex: 1; align-items: flex-start; margin-top: 16px; }
+  .split-left { flex: 1; }
+  .split-right { flex: 1; }
+
+  .callout {
+    background: rgba(246,216,76,0.06); border-left: 3px solid var(--sconto-yellow);
+    padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 16px 0;
+    font-size: 14px;
+  }
+  .callout-red {
+    background: rgba(239,68,68,0.06); border-left: 3px solid var(--sconto-red);
+    padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 16px 0;
+    font-size: 14px;
+  }
+  .callout-green {
+    background: rgba(34,197,94,0.06); border-left: 3px solid var(--sconto-green);
+    padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 16px 0;
+    font-size: 14px;
+  }
+  .callout strong { color: var(--sconto-yellow); }
+  .callout-red strong { color: var(--sconto-red); }
+  .callout-green strong { color: var(--sconto-green); }
+
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+
+  .td-red { color: var(--sconto-red); }
+  .td-green { color: var(--sconto-green); }
+
+  .winner-card {
+    background: var(--sconto-surface); border: 2px solid var(--sconto-green);
+    border-radius: 12px; padding: 28px; position: relative;
+    box-shadow: 0 0 30px rgba(34,197,94,0.15);
+  }
+  .winner-badge {
+    position: absolute; top: -12px; left: 24px;
+    background: var(--sconto-green); color: #fff;
+    font-size: 11px; font-weight: 700; padding: 4px 14px;
+    border-radius: 12px; text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  .diagram-box {
+    background: rgba(0,0,0,0.3); border: 1px solid var(--sconto-border);
+    border-radius: 12px; padding: 24px; font-family: 'Courier New', monospace;
+    font-size: 14px; color: var(--sconto-muted); line-height: 2;
+    margin: 12px 0;
+  }
+  .diagram-box .hl-green { color: var(--sconto-green); font-weight: 700; }
+  .diagram-box .hl-blue { color: #5b9fff; font-weight: 700; }
+  .diagram-box .hl-yellow { color: var(--sconto-yellow); font-weight: 700; }
+  .diagram-box .hl-orange { color: var(--sconto-orange); font-weight: 700; }
+
+  .keyboard-hint {
+    position: fixed; bottom: 24px; left: 30px; z-index: 100;
+    font-size: 11px; color: var(--sconto-muted);
+  }
+  .keyboard-hint kbd {
+    background: var(--sconto-surface); border: 1px solid var(--sconto-border);
+    padding: 2px 8px; border-radius: 4px; font-family: 'Poppins', sans-serif;
+    font-size: 11px;
+  }
+
+  @media print {
+    body { background: #fff; color: #222; overflow: visible; }
+    .slide { position: relative; opacity: 1; visibility: visible; transform: none;
+             page-break-after: always; height: auto; min-height: 100vh; }
+    .logo-bar, .nav-controls, .keyboard-hint, .progress-bar { display: none; }
+    .slide { padding: 40px; }
+    h1 { -webkit-text-fill-color: var(--sconto-navy); color: var(--sconto-navy); }
+    .card, .metric { border-color: #ddd; background: #fafafa; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGO BAR -->
+<div class="logo-bar">
+  <svg width="180" height="78" viewBox="0 0 183 79" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0H183V75C183 77.2091 181.209 79 179 79H4C1.79086 79 0 77.2091 0 75V0Z" fill="#F6D84C"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M26.0557 33.2328C26.0557 32.5214 26.1924 31.5741 27.1402 31.5741C27.8171 31.5741 28.2904 32.1154 28.3927 32.6908C28.8666 35.3967 30.7629 38.7451 33.7402 39.3543V41.3165C30.7948 41.2474 30.1523 40.0644 28.9345 40.0644C27.8493 40.0644 27.9513 41.1809 27.1051 41.1809C26.0557 41.1809 26.0557 39.9284 26.0557 39.7609V33.2328ZM43.7286 22.3064C43.7286 23.0844 43.5929 23.9295 42.6106 23.9295C41.7989 23.9295 41.4945 23.2869 41.3922 22.6105C41.0187 20.1076 38.9213 17.5365 36.2812 16.9617V15.0004C38.4127 15.0341 40.6818 16.319 41.0531 16.319C41.9337 16.319 41.8665 15.1019 42.7464 15.1019C43.7953 15.1019 43.7286 16.2518 43.7286 16.5222V22.3064ZM34.7559 16.9617C33.4703 17.4014 32.3529 18.3488 32.3529 19.735C32.3529 21.3934 33.2676 22.4086 37.2972 23.9639C43.2876 26.2637 44.642 29.4431 44.642 32.5564C44.642 37.7984 40.2736 41.2152 35.2652 41.3165V39.3543C36.889 38.8476 38.2766 38.1031 38.3445 36.2424C38.4127 34.1114 35.9089 33.2328 34.2842 32.5214C30.0181 30.7299 26.0557 28.8011 26.0557 23.4904C26.0557 18.3488 29.7813 15.1691 34.7559 15.0004V16.9617Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M56.3179 41.3165C48.8695 41.1808 45.3491 35.5326 45.3491 28.5982C45.3491 20.7848 49.7501 15.2372 56.3179 15V16.961C54.6925 17.3004 54.1514 18.6876 54.1514 20.1075V36.1414C54.1514 37.5608 54.6925 38.9482 56.3179 39.3542V41.3165ZM64.5105 33.4691C65.1533 33.4691 65.5262 34.0098 65.5262 34.619C65.4583 37.392 61.3617 41.4515 57.8407 41.3165V39.3542C60.4486 38.7791 62.648 37.0535 63.3925 34.5518C63.5958 33.976 63.8001 33.4691 64.5105 33.4691ZM57.8407 15C59.0941 15.0347 61.6995 16.3524 62.5807 16.3524C63.0884 16.3524 63.2924 16.1496 63.4938 15.7104C63.6987 15.271 63.9361 15 64.4082 15C65.4911 15 65.4911 16.0496 65.4911 16.2171V24.0661C65.4911 24.2348 65.4911 25.2835 64.4082 25.2835C63.6987 25.2835 63.2924 24.7077 63.1553 24.0661C62.5807 21.3256 60.9891 17.808 57.8407 16.961V15Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M78.1803 39.3543C79.771 38.7792 79.9061 37.7649 79.9061 36.9188V19.3959C79.9061 18.552 79.771 17.5365 78.1803 16.9614V15.0004C85.3575 15.642 88.7074 21.4266 88.7074 28.1584C88.7074 34.8888 85.3575 40.6736 78.1803 41.3165V39.3543ZM76.6557 16.9614C75.0647 17.5365 74.9296 18.552 74.9296 19.3959V36.9188C74.9296 37.7649 75.0647 38.7792 76.6557 39.3543V41.3165C69.4801 40.6736 66.1289 34.8888 66.1289 28.1584C66.1289 21.4266 69.4801 15.642 76.6557 15.0004V16.9614Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M108.884 32.6233V40.8085H103.839L91.4512 19.4646C90.9081 18.5178 90.7392 18.0105 89.6215 17.6373C89.046 17.4348 88.6058 17.3001 88.6058 16.5556C88.6058 15.5423 89.6215 15.5423 90.3326 15.5076H99.0337L108.884 32.6233ZM106.921 21.6293C106.921 16.7928 104.145 18.0774 104.145 16.5221C104.145 15.5748 105.262 15.5076 105.602 15.5076H110.205C110.542 15.5076 111.66 15.5748 111.66 16.5221C111.66 18.0774 108.884 16.7928 108.884 21.6293V29.8493H108.817L106.921 26.4324V21.6293ZM91.2463 21.8659H91.3135L93.2111 25.2484V35.4644C93.751 39.6927 95.9184 38.374 95.9184 39.8274C95.9184 40.877 94.5308 40.8085 94.157 40.8085H90.2991C89.9265 40.8085 88.5386 40.877 88.5386 39.8274C88.5386 38.374 90.7057 39.6927 91.2463 35.4644V21.8659Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M112.433 15.5075H117.307V17.4688C115.548 18.7203 115.073 20.9529 114.77 22.7454C114.668 23.4902 114.499 24.3692 113.551 24.3692C112.535 24.3692 112.433 23.5243 112.433 23.388V15.5075ZM133.524 23.388C133.524 23.5243 133.424 24.3692 132.406 24.3692C131.46 24.3692 131.291 23.4902 131.189 22.7454C130.884 20.9529 130.412 18.7203 128.65 17.4688V15.5075H133.524V23.388ZM118.832 15.5075H127.126V37.0199C127.126 38.2717 127.091 38.4749 128.277 38.8478C128.716 38.9819 129.022 39.2872 129.022 39.7605C129.022 40.7413 127.905 40.8085 127.769 40.8085H118.189C118.054 40.8085 116.936 40.7413 116.936 39.7605C116.936 39.2872 117.24 38.9819 117.678 38.8478C118.867 38.4749 118.832 38.2717 118.832 37.0199V15.5075Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M146.172 39.3543C147.764 38.7792 147.899 37.7649 147.899 36.9188V19.3959C147.899 18.552 147.764 17.5365 146.172 16.9614V15.0004C153.349 15.642 156.699 21.4266 156.699 28.1584C156.699 34.8888 153.349 40.6736 146.172 41.3165V39.3543ZM144.65 16.9614C143.059 17.5365 142.922 18.552 142.922 19.3959V36.9188C142.922 37.7649 143.059 38.7792 144.65 39.3543V41.3165C137.472 40.6736 134.123 34.8888 134.123 28.1584C134.123 21.4266 137.472 15.642 144.65 15.0004V16.9614Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M36.4508 59.33V63.5343H33.86L27.4956 52.5707C27.2172 52.084 27.1299 51.8233 26.5571 51.6327C26.2603 51.5283 26.0344 51.4583 26.0344 51.0766C26.0344 50.5559 26.5571 50.5559 26.9219 50.5378H31.3904L36.4508 59.33ZM35.4426 53.6831C35.4426 51.1985 34.0171 51.859 34.0171 51.0591C34.0171 50.5728 34.5908 50.5378 34.7641 50.5378H37.1289C37.3032 50.5378 37.8772 50.5728 37.8772 51.0591C37.8772 51.859 36.4508 51.1985 36.4508 53.6831V57.9048H36.417L35.4426 56.1501V53.6831ZM27.3914 53.8043H27.4264L28.3996 55.5421V60.7894C28.6774 62.9613 29.7913 62.2828 29.7913 63.0304C29.7913 63.569 29.0778 63.5343 28.8873 63.5343H26.9037C26.7132 63.5343 26 63.569 26 63.0304C26 62.2828 27.1136 62.9613 27.3914 60.7894V53.8043Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M51.4918 60.1639H48.9537L49.1967 59.1559H51.3176L49.5611 51.4764L49.7876 50.5381H53.6305L56.24 61.5189C56.3429 62.0052 56.3598 62.3353 56.8475 62.5444C57.0899 62.6478 57.2823 62.7694 57.2823 63.0826C57.2823 63.5515 56.6563 63.5343 56.3257 63.5343H51.9954C51.6488 63.5343 51.1446 63.4996 51.1446 63.0482C51.1446 62.7694 51.2478 62.6835 51.4737 62.5616C51.9263 62.3006 51.9954 62.179 51.8393 61.5017L51.4918 60.1639ZM49.6306 54.9342L47.9964 60.8756C47.718 61.9355 47.9614 62.2312 48.5529 62.4919C48.8304 62.6138 49.0741 62.7175 49.0741 63.0654C49.0741 63.5514 48.5179 63.5343 48.1704 63.5343H46.1709C45.8227 63.5343 45.1968 63.5174 45.1968 63.0126C45.1968 62.5966 45.4921 62.6138 45.8753 62.4222C46.24 62.2312 46.7099 61.8314 47.0402 60.5978L49.1276 52.9707H49.1786L49.6306 54.9342ZM53.9949 47.0287L52.2047 49.7389H50.2406L51.1265 47.0287H53.9949Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M70.731 50.5381H71.2713C72.3661 50.5381 73.4791 50.556 74.4873 51.042C75.5655 51.5805 76.1918 52.4838 76.1918 53.7178C76.1918 55.6285 74.5911 56.5149 72.9048 56.7756V56.8103C74.8348 57.1225 76.366 57.9748 76.366 60.1468C76.366 61.3799 75.8264 62.3528 74.73 62.9611C73.6177 63.5859 72.5222 63.5343 71.2875 63.5343H70.731V62.5269C71.8963 62.4747 72.0355 61.8137 72.0355 61.1886V58.9472C72.0355 58.1489 71.8443 57.4013 70.731 57.3147V56.3067C72.0007 56.2023 72.0355 55.4553 72.0355 54.8124V53.0746C72.0355 52.345 71.7749 51.6499 70.731 51.5461V50.5381ZM69.9493 63.5343H65.2709C65.1495 63.5343 64.7153 63.4996 64.7153 62.9958C64.7153 62.7523 64.8708 62.5966 65.0967 62.5269C65.7063 62.3353 65.6882 62.2313 65.6882 61.588V52.4838C65.6882 51.8412 65.7063 51.7371 65.0967 51.5461C64.8708 51.4764 64.7153 51.3199 64.7153 51.077C64.7153 50.5732 65.1495 50.5381 65.2709 50.5381H69.9493V63.5343Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M87.6068 58.4956L84.9817 52.275C84.8597 51.9634 84.7733 51.7374 84.4768 51.5462C84.2506 51.424 84.0776 51.3374 84.0776 51.042C84.0776 50.5035 84.6341 50.5382 84.9992 50.5382H89.2941C89.6764 50.5382 90.2504 50.5035 90.2504 51.0592C90.2504 51.3199 90.0583 51.459 89.8681 51.5805C89.6764 51.6849 89.5384 51.7553 89.5384 51.9978C89.5384 52.2235 89.6244 52.4495 89.7117 52.6579L91.8673 57.5751V61.588C91.8673 62.2313 91.8504 62.3354 92.4594 62.5266C92.685 62.5963 92.8408 62.7523 92.8408 62.9958C92.8408 63.4996 92.2677 63.5343 92.1989 63.5343H87.2765C87.2073 63.5343 86.6339 63.4996 86.6339 62.9958C86.6339 62.7523 86.7903 62.5963 87.0162 62.5266C87.6249 62.3354 87.6068 62.2313 87.6068 61.588V58.4956ZM91.6765 55.3859L92.5802 53.3699C92.7203 53.0746 92.8408 52.7973 92.8408 52.4495C92.8408 51.4064 91.659 51.789 91.659 51.077C91.659 50.4513 92.3715 50.5382 92.7888 50.5382H94.7189C95.1196 50.5382 95.606 50.5729 95.606 51.0939C95.606 51.3893 95.4149 51.5105 95.1718 51.6156C94.4586 51.9109 94.2675 52.1716 93.9372 52.8842L92.2336 56.6196L91.6765 55.3859Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M103.727 50.5378H106.23V51.5458C105.325 52.1881 105.082 53.3352 104.926 54.256C104.875 54.6389 104.787 55.0903 104.3 55.0903C103.779 55.0903 103.727 54.6555 103.727 54.5864V50.5378ZM114.56 54.5864C114.56 54.6555 114.507 55.0903 113.986 55.0903C113.498 55.0903 113.411 54.6389 113.36 54.256C113.203 53.3352 112.96 52.1881 112.055 51.5458V50.5378H114.56V54.5864ZM107.012 50.5378H111.273V61.588C111.273 62.2313 111.255 62.3354 111.864 62.5269C112.09 62.5967 112.246 62.7523 112.246 62.9955C112.246 63.4993 111.673 63.534 111.603 63.534H106.682C106.612 63.534 106.039 63.4993 106.039 62.9955C106.039 62.7523 106.196 62.5967 106.421 62.5269C107.031 62.3354 107.012 62.2313 107.012 61.588V50.5378Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M129.452 62.5271C130.86 62.3527 131.939 61.3975 132.409 60.0072C132.53 59.7466 132.634 59.469 132.947 59.469C133.503 59.469 133.452 59.9903 133.452 60.0591V63.5341H129.452V62.5271ZM129.452 56.3409C130.182 56.1499 130.513 55.4729 130.67 54.8122C130.756 54.5171 130.86 54.239 131.226 54.239C131.765 54.239 131.678 54.8638 131.678 55.0035V58.7561C131.678 58.8958 131.765 59.5209 131.226 59.5209C130.86 59.5209 130.756 59.243 130.67 58.9473C130.513 58.2872 130.182 57.6096 129.452 57.4189V56.3409ZM129.452 50.538H133.33V54.0649C133.33 54.1524 133.312 54.4821 132.791 54.4821C132.496 54.4821 132.409 54.308 132.321 54.0474C131.869 52.6405 130.982 51.7891 129.452 51.5457V50.538ZM124.079 50.538H128.67V63.5341H124.079C124.01 63.5341 123.436 63.4991 123.436 62.9956C123.436 62.7524 123.593 62.5968 123.817 62.5271C124.427 62.3355 124.409 62.2314 124.409 61.5878V52.4836C124.409 51.8413 124.427 51.7372 123.817 51.5457C123.593 51.4766 123.436 51.32 123.436 51.0765C123.436 50.5733 124.01 50.538 124.079 50.538Z" fill="#202330"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M146.572 61.5878C146.572 62.2314 146.555 62.3355 147.163 62.5271C147.389 62.5968 147.546 62.7524 147.546 62.9959C147.546 63.4991 146.971 63.5344 146.903 63.5344H141.98C141.912 63.5344 141.338 63.4991 141.338 62.9959C141.338 62.7524 141.495 62.5968 141.721 62.5271C142.329 62.3355 142.312 62.2314 142.312 61.5878V52.4836C142.312 51.841 142.329 51.7369 141.721 51.546C141.495 51.4763 141.338 51.3197 141.338 51.0765C141.338 50.5733 141.912 50.538 141.98 50.538H146.903C146.971 50.538 147.546 50.5733 147.546 51.0765C147.546 51.3197 147.389 51.4763 147.163 51.546C146.555 51.7369 146.572 51.841 146.572 52.4836V61.5878ZM153.128 61.6403C153.285 62.0226 153.336 62.3183 153.736 62.5096C153.996 62.6311 154.153 62.7349 154.153 63.0656C154.153 63.5688 153.58 63.5344 153.233 63.5344H148.867C148.467 63.5344 147.945 63.5344 147.945 62.9959C147.945 62.422 148.659 62.5271 148.659 62.1442C148.659 62.0051 148.572 61.745 148.519 61.6235L147.442 58.3919C147.337 58.0615 147.215 57.6965 147.215 57.3317C147.215 56.967 147.406 56.7404 147.615 56.4456L149.632 53.5795C149.875 53.2485 150.084 52.9012 150.084 52.4836C150.084 52.0151 149.84 51.7723 149.423 51.5982C149.146 51.4763 148.884 51.4069 148.884 51.0593C148.884 50.5211 149.371 50.538 149.736 50.538H152.71C153.128 50.538 153.631 50.5558 153.631 51.1112C153.631 51.5113 153.301 51.6329 152.988 51.7548C151.789 52.2061 151.389 52.8662 150.658 53.8573L150.327 54.308L153.128 61.6403Z" fill="#202330"/>
+  </svg>
+  <div class="slide-counter"><span id="currentSlide">1</span> / <span id="totalSlides">7</span></div>
+</div>
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar" id="progressBar" style="width: 14.3%"></div>
+
+<!-- SLIDE DECK -->
+<div class="slide-deck" id="deck">
+
+<!-- ═══════════ SLIDE 1: TITLE ═══════════ -->
+<div class="slide active" data-slide="1">
+  <div class="hero-center">
+    <div class="badge-row" style="justify-content:center; margin-bottom: 20px;">
+      <span class="tag tag-blue">IM 3.0</span>
+      <span class="tag tag-yellow">Aurora &rarr; Azure PG</span>
+      <span class="tag tag-green">Replikace</span>
+    </div>
+    <h1>Kterou cestou?<br><span style="font-size:0.55em; font-weight:300; -webkit-text-fill-color: var(--sconto-muted);">Aurora PostgreSQL &rarr; Azure PostgreSQL replikace</span></h1>
+    <p class="subtitle">8 pristupu. 3 realne pro Sconto. 1 doporuceni.</p>
+    <div style="margin-top: 32px; display:flex; gap:16px; justify-content:center;">
+      <div class="metric" style="min-width:160px;">
+        <div class="metric-value">8</div>
+        <div class="metric-label">Pristupu analyzovano</div>
+      </div>
+      <div class="metric" style="min-width:160px;">
+        <div class="metric-value">AWS &harr; Azure</div>
+        <div class="metric-label">Cross-cloud</div>
+      </div>
+      <div class="metric" style="min-width:160px;">
+        <div class="metric-value">CDC</div>
+        <div class="metric-label">Change Data Capture</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 2: KONTEXT ═══════════ -->
+<div class="slide" data-slide="2">
+  <h3>Proc to resime</h3>
+  <h2>IM 3.0 = konec CSV, zacatek PG repliky</h2>
+  <div class="split-content">
+    <div class="split-left">
+      <div class="card" style="border-top: 3px solid var(--sconto-red);">
+        <div class="card-title" style="color:var(--sconto-red);">Dnes (IM 2.0)</div>
+        <ul class="bullet-list" style="margin-top:12px;">
+          <li>Data z ERP prichazi jako <strong>CSV soubory</strong></li>
+          <li>Zakaznici, firmy, produkty = <strong>1x denne</strong></li>
+          <li>Sklady = <strong>1x za hodinu</strong> + per-order SKU</li>
+          <li>Moeve webservice = jedina API trubka do ERP</li>
+          <li>Bezi 3 roky na Windows serveru, nikdo na to nesaha</li>
+        </ul>
+      </div>
+    </div>
+    <div class="split-right">
+      <div class="card" style="border-top: 3px solid var(--sconto-green);">
+        <div class="card-title" style="color:var(--sconto-green);">Cil (IM 3.0)</div>
+        <ul class="bullet-list" style="margin-top:12px;">
+          <li>IM cte primo z <strong>Azure PostgreSQL repliky</strong></li>
+          <li>Data = <strong>near real-time</strong> (sekundy misto dnu)</li>
+          <li>Moeve webservice bottleneck = <strong>obejity</strong></li>
+          <li>IM = <strong>SSOT</strong> pro vsechny prepocty</li>
+          <li>E-shop + POS konzumuji stejna hotova data</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="diagram-box" style="margin-top:20px; text-align:center;">
+    <span class="hl-blue">AWS Aurora PostgreSQL</span> &mdash;&mdash; <span class="hl-orange">??? replikace ???</span> &mdash;&mdash;&gt; <span class="hl-green">Azure PostgreSQL (DWH)</span> &mdash;&mdash;&gt; <span class="hl-yellow">.NET IM</span>
+  </div>
+  <div class="callout" style="margin-top:8px;">
+    <strong>Otazka:</strong> Jak dostat data z Aurora (AWS) do Azure PostgreSQL? Kolik pristupu existuje a ktery je pro Sconto spravny?
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 3: PŘEHLED VŠECH PŘÍSTUPŮ ═══════════ -->
+<div class="slide" data-slide="3">
+  <h3>Vsechny moznosti</h3>
+  <h2>8 pristupu &mdash; rychly prehled</h2>
+  <table class="s-table" style="font-size:13px;">
+    <thead>
+      <tr>
+        <th>Pristup</th>
+        <th>CDC?</th>
+        <th>Latence</th>
+        <th>Cena/mes</th>
+        <th>Slozitost</th>
+        <th>Managed?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="highlight-row">
+        <td><strong>Nativni logicka replikace</strong></td>
+        <td class="td-green">Ano</td>
+        <td class="td-green">&lt;1s</td>
+        <td>$50&ndash;150</td>
+        <td>Stredni</td>
+        <td class="td-red">Ne</td>
+      </tr>
+      <tr class="highlight-row">
+        <td><strong>AWS DMS</strong></td>
+        <td class="td-green">Ano</td>
+        <td class="td-green">Sekundy</td>
+        <td>$200&ndash;400</td>
+        <td>Stredni</td>
+        <td class="td-green">Ano</td>
+      </tr>
+      <tr>
+        <td>Debezium + Kafka</td>
+        <td class="td-green">Ano</td>
+        <td class="td-green">Sekundy</td>
+        <td>$400&ndash;1000+</td>
+        <td class="td-red">Vysoka</td>
+        <td class="td-red">Ne</td>
+      </tr>
+      <tr class="highlight-row">
+        <td><strong>Airbyte (OSS)</strong></td>
+        <td>Micro-batch</td>
+        <td>Minuty</td>
+        <td>$200&ndash;500</td>
+        <td class="td-green">Nizka</td>
+        <td>Castecne</td>
+      </tr>
+      <tr>
+        <td>Fivetran</td>
+        <td class="td-green">Ano</td>
+        <td>1&ndash;15 min</td>
+        <td class="td-red">$500&ndash;20,000+</td>
+        <td class="td-green">Nizka</td>
+        <td class="td-green">Ano</td>
+      </tr>
+      <tr>
+        <td>Azure Data Factory</td>
+        <td class="td-red">Ne</td>
+        <td class="td-red">Min&ndash;Hod</td>
+        <td>$100&ndash;500</td>
+        <td>Stredni</td>
+        <td class="td-green">Ano</td>
+      </tr>
+      <tr>
+        <td>Kafka Connect pipeline</td>
+        <td class="td-green">Ano</td>
+        <td class="td-green">Sekundy</td>
+        <td>$400&ndash;1000+</td>
+        <td class="td-red">Vysoka</td>
+        <td class="td-red">Ne</td>
+      </tr>
+      <tr>
+        <td>pg_dump / pg_restore</td>
+        <td class="td-red">Ne</td>
+        <td class="td-red">Hodiny</td>
+        <td>$5&ndash;50</td>
+        <td class="td-green">Nizka</td>
+        <td class="td-red">Ne</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout" style="margin-top:12px;">
+    <strong>Zvyraznene</strong> = realisticke kandidatky pro Sconto. Fivetran je prilis drahy, Kafka pipeline prilis slozita, ADF nema CDC, pg_dump neni real-time.
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 4: TOP 3 PRO SCONTO ═══════════ -->
+<div class="slide" data-slide="4">
+  <h3>Top 3 pro Sconto</h3>
+  <h2>Tri realne cesty &mdash; detailni srovnani</h2>
+  <div class="grid-3">
+    <div class="card" style="border-top: 3px solid var(--sconto-yellow);">
+      <div class="card-number" style="font-size:20px;">A</div>
+      <div class="card-title" style="color:var(--sconto-yellow);">Nativni PG replikace</div>
+      <div class="card-desc" style="margin-top:8px;">
+        <strong style="color:#fff;">Jak:</strong> PostgreSQL Publication/Subscription. Aurora publikuje WAL, Azure PG subscribuje.<br><br>
+        <strong style="color:var(--sconto-green);">+</strong> Nejnizsi latence (&lt;1s)<br>
+        <strong style="color:var(--sconto-green);">+</strong> Zadne dalsi naklady (nativni PG)<br>
+        <strong style="color:var(--sconto-green);">+</strong> Jednoduchy setup (jen SQL)<br><br>
+        <strong style="color:var(--sconto-red);">&ndash;</strong> Aurora failover = ztrata slotu<br>
+        <strong style="color:var(--sconto-red);">&ndash;</strong> DDL zmeny rucne<br>
+        <strong style="color:var(--sconto-red);">&ndash;</strong> Monitoring = nase starost
+      </div>
+      <div style="margin-top:12px;">
+        <span class="tag tag-yellow" style="font-size:10px;">$50&ndash;150/mes</span>
+      </div>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--sconto-blue);">
+      <div class="card-number" style="font-size:20px;">B</div>
+      <div class="card-title" style="color:#5b9fff;">AWS DMS</div>
+      <div class="card-desc" style="margin-top:8px;">
+        <strong style="color:#fff;">Jak:</strong> AWS Database Migration Service. Full load + ongoing CDC. Managed instance v AWS.<br><br>
+        <strong style="color:var(--sconto-green);">+</strong> Managed (AWS se stara)<br>
+        <strong style="color:var(--sconto-green);">+</strong> Full load + CDC v jednom<br>
+        <strong style="color:var(--sconto-green);">+</strong> Flat pricing (ne per-row)<br>
+        <strong style="color:var(--sconto-green);">+</strong> Vestavena validace<br><br>
+        <strong style="color:var(--sconto-red);">&ndash;</strong> Aurora failover = restart tasku<br>
+        <strong style="color:var(--sconto-red);">&ndash;</strong> Problemy s JSONB/PostGIS
+      </div>
+      <div style="margin-top:12px;">
+        <span class="tag tag-blue" style="font-size:10px;">$200&ndash;400/mes</span>
+      </div>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--sconto-green);">
+      <div class="card-number" style="font-size:20px;">C</div>
+      <div class="card-title" style="color:var(--sconto-green);">Airbyte (OSS)</div>
+      <div class="card-desc" style="margin-top:8px;">
+        <strong style="color:#fff;">Jak:</strong> Open-source ETL. Debezium pod kapotou. Jednoduche UI pro konfiguraci.<br><br>
+        <strong style="color:var(--sconto-green);">+</strong> Nejjednodussi UI/setup<br>
+        <strong style="color:var(--sconto-green);">+</strong> 300+ konektoru (budouci pouziti)<br>
+        <strong style="color:var(--sconto-green);">+</strong> OSS verze zdarma<br><br>
+        <strong style="color:var(--sconto-red);">&ndash;</strong> Micro-batch (min ~1&ndash;5 min)<br>
+        <strong style="color:var(--sconto-red);">&ndash;</strong> Vyssi latence nez A/B<br>
+        <strong style="color:var(--sconto-red);">&ndash;</strong> Infrastruktura na nas
+      </div>
+      <div style="margin-top:12px;">
+        <span class="tag tag-green" style="font-size:10px;">$200&ndash;500/mes</span>
+      </div>
+    </div>
+  </div>
+  <div class="callout-red" style="margin-top:16px;">
+    <strong>Spolecne riziko vsech CDC pristupu:</strong> Aurora failover = ztrata replication slotu. Musi se mit automation pro re-sync. Vsechny pristupy vyzaduji <code>rds.logical_replication = 1</code> (reboot clusteru!).
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 5: DOPORUČENÍ ═══════════ -->
+<div class="slide" data-slide="5">
+  <h3>Doporuceni</h3>
+  <h2>AWS DMS &mdash; nejlepsi pomer jednoduchost / vykon</h2>
+  <div class="grid-2">
+    <div>
+      <div class="winner-card">
+        <div class="winner-badge">DOPORUCENO</div>
+        <div class="card-title" style="color:var(--sconto-green); font-size:22px; margin-top:8px;">Scenar B: AWS DMS</div>
+        <div class="diagram-box" style="margin-top:16px;">
+          <span class="hl-blue">Aurora PG</span> (wal_level=logical)<br>
+          &nbsp;&nbsp;&rarr; <span class="hl-orange">AWS DMS</span> (full load + ongoing CDC)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&rarr; <span class="hl-green">Azure PostgreSQL</span> (Flexible Server)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr; <span class="hl-yellow">dbt</span> (transformace do analytickych modelu)
+        </div>
+        <ul class="check-list" style="margin-top:16px;">
+          <li>Managed = AWS se stara o infrastrukturu</li>
+          <li>Flat pricing = $200&ndash;400/mes nezavisle na objemu</li>
+          <li>Full load + CDC v jednom nastroji</li>
+          <li>Vestavena validace source vs. target</li>
+          <li>CloudWatch monitoring z boxu</li>
+          <li>Sekundova latence (near real-time)</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="border-top: 3px solid var(--sconto-orange); margin-bottom:16px;">
+        <div class="card-title" style="color:var(--sconto-orange);">Fallback plan</div>
+        <div class="card-desc" style="margin-top:8px;">
+          Kdyz DMS nestaci (datove typy, latence, slozitost):
+          <ul class="bullet-list" style="margin-top:8px;">
+            <li><strong>Eskalace na nativni PG replikaci</strong> &mdash; nizsi latence, zadne naklady navic, ale vic ops prace</li>
+            <li><strong>Nebo Airbyte OSS</strong> &mdash; kdyz potrebujeme vice zdroju dat (ne jen Aurora)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--sconto-yellow);">
+        <div class="card-title" style="color:var(--sconto-yellow);">Prerequisity</div>
+        <div class="card-desc" style="margin-top:8px;">
+          <ul class="bullet-list" style="margin-top:0;">
+            <li><code>rds.logical_replication = 1</code> na Aurora (<strong>reboot!</strong>)</li>
+            <li>Cross-cloud sit: VPN nebo public endpoint + TLS</li>
+            <li>Tabulky musi mit <strong>PRIMARY KEY</strong></li>
+            <li>DDL zmeny rucne na obou stranach (Flyway/Liquibase)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 6: GOTCHAS ═══════════ -->
+<div class="slide" data-slide="6">
+  <h3>Pozor na</h3>
+  <h2>Kriticke gotchas &mdash; at nas to neprekvapl</h2>
+  <div class="grid-2">
+    <div class="card" style="border-top: 3px solid var(--sconto-red);">
+      <div class="card-number" style="color:var(--sconto-red); font-size:24px;">1</div>
+      <div class="card-title">Aurora failover = ztrata slotu</div>
+      <div class="card-desc">Pri Aurora failoveru (writer &rarr; reader promotion) se replication sloty ZTRATI. DMS task se musi restartovat, mozny re-sync. Musi byt automation + CloudWatch alarm na <code>OldestReplicationSlotLag</code>.</div>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--sconto-red);">
+      <div class="card-number" style="color:var(--sconto-red); font-size:24px;">2</div>
+      <div class="card-title">Neaktivni slot = zaplneny disk</div>
+      <div class="card-desc">Kdyz subscriber spadne a slot zustane, WAL soubory se hromadi a MUZE SE ZAPLNIT DISK. Nastavit <code>max_slot_wal_keep_size</code> jako safety net. CloudWatch alarm na <code>TransactionLogsDiskUsage</code>.</div>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--sconto-orange);">
+      <div class="card-number" style="color:var(--sconto-orange); font-size:24px;">3</div>
+      <div class="card-title">DDL zmeny se NEREPLIKUJI</div>
+      <div class="card-desc">Zadny CDC pristup automaticky nereplikuje CREATE/ALTER TABLE. Schema zmeny musime aplikovat rucne na obou stranach. Reseni: Flyway nebo Liquibase (schema migration tool).</div>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--sconto-orange);">
+      <div class="card-number" style="color:var(--sconto-orange); font-size:24px;">4</div>
+      <div class="card-title">Cross-cloud sit + WAL overhead</div>
+      <div class="card-desc"><code>wal_level=logical</code> = +10&ndash;20% vic WAL dat (vyssi I/O). Cross-cloud latence = VPN ($) nebo public endpoint s TLS. Egress z AWS = ~$0.09/GB. Overit s Alefem (DevOps).</div>
+    </div>
+  </div>
+  <div class="callout" style="margin-top:16px;">
+    <strong>Dobra zprava:</strong> Vsechny tyto gotchas jsou resitelne. DMS ma built-in recovery pro failover. Monitoring pres CloudWatch existuje. Schema migrace pres Flyway je standard. Nic z toho neni showstopper.
+  </div>
+</div>
+
+<!-- ═══════════ SLIDE 7: NEXT STEPS ═══════════ -->
+<div class="slide" data-slide="7">
+  <h3>Co dal</h3>
+  <h2>Dalsi kroky &mdash; rozhodovaci checklist</h2>
+  <div class="grid-2">
+    <div>
+      <div class="card" style="border-top: 3px solid var(--sconto-green);">
+        <div class="card-title" style="color:var(--sconto-green);">Rozhodnout</div>
+        <ul class="bullet-list" style="margin-top:12px;">
+          <li><strong>Cesta A, B nebo C?</strong> &mdash; doporucujeme B (DMS)</li>
+          <li><strong>Ktere tabulky replikovat?</strong> &mdash; vsechny, nebo jen vybrane?</li>
+          <li><strong>Cross-cloud sit:</strong> VPN vs. public TLS endpoint?</li>
+          <li><strong>Schema migrace:</strong> Flyway, Liquibase, nebo rucne?</li>
+          <li><strong>dbt ano/ne?</strong> &mdash; transformace na Azure strane</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="border-top: 3px solid var(--sconto-blue);">
+        <div class="card-title" style="color:#5b9fff;">Implementacni kroky (po rozhodnuti)</div>
+        <ul class="bullet-list" style="margin-top:12px;">
+          <li>Zapnout <code>rds.logical_replication = 1</code> na Aurora</li>
+          <li>Vytvorit Azure PostgreSQL Flexible Server</li>
+          <li>Nastavit cross-cloud konektivitu (VPN / TLS)</li>
+          <li>Nakonfigurovat DMS replikacni instanci</li>
+          <li>Full load + prepnout na ongoing CDC</li>
+          <li>Nastavit monitoring (CloudWatch alarmy)</li>
+          <li>Overit data validaci (DMS built-in)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top: 24px; display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
+    <div class="metric" style="min-width:160px;border-color:var(--sconto-green);">
+      <div class="metric-value" style="font-size:24px;color:var(--sconto-green);">DMS</div>
+      <div class="metric-label">Doporucena cesta</div>
+    </div>
+    <div class="metric" style="min-width:160px;">
+      <div class="metric-value" style="font-size:24px;">$200&ndash;400</div>
+      <div class="metric-label">Mesicni naklady</div>
+    </div>
+    <div class="metric" style="min-width:160px;border-color:var(--sconto-blue);">
+      <div class="metric-value" style="font-size:24px;color:#5b9fff;">~sekundy</div>
+      <div class="metric-label">Latence</div>
+    </div>
+    <div class="metric" style="min-width:160px;border-color:var(--sconto-yellow);">
+      <div class="metric-value" style="font-size:24px;color:var(--sconto-yellow);">Managed</div>
+      <div class="metric-label">Zero-ops (AWS)</div>
+    </div>
+  </div>
+  <div class="callout-green" style="margin-top:16px;">
+    <strong>Detailni research:</strong> Kompletni analyza vsech 8 pristupu vcetne kodu, konfiguraci a 80+ odkazu na dokumentaci je v <code>dev 3/docs/aurora-to-azure-postgresql-replikace.md</code>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- NAVIGATION -->
+<div class="nav-controls">
+  <button class="nav-btn" onclick="prevSlide()" title="Predchozi">&#8249;</button>
+  <button class="nav-btn" onclick="nextSlide()" title="Dalsi">&#8250;</button>
+</div>
+<div class="keyboard-hint"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> nebo klikni pro navigaci</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+let current = 0;
+
+document.getElementById('totalSlides').textContent = total;
+
+function showSlide(n) {
+  slides[current].classList.remove('active');
+  current = ((n % total) + total) % total;
+  slides[current].classList.add('active');
+  document.getElementById('currentSlide').textContent = current + 1;
+  document.getElementById('progressBar').style.width = ((current + 1) / total * 100) + '%';
+}
+
+function nextSlide() { showSlide(current + 1); }
+function prevSlide() { showSlide(current - 1); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+  if (e.key === 'Home') { e.preventDefault(); showSlide(0); }
+  if (e.key === 'End') { e.preventDefault(); showSlide(total - 1); }
+});
+
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; });
+document.addEventListener('touchend', e => {
+  const diff = touchStartX - e.changedTouches[0].screenX;
+  if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
+});
+</script>
+
+</body>
+</html>
